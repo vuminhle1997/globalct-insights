@@ -49,7 +49,8 @@ except Exception as e:
 def create_db_and_tables():
     """
     Create all database tables defined in the SQLModel metadata.
-    This function should be called during application initialization.
+    DEPRECATED: Use Alembic migrations instead. This function is kept for backward compatibility
+    in development environments only. For production, run: alembic upgrade head
     """
     SQLModel.metadata.create_all(engine)
 

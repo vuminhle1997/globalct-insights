@@ -161,6 +161,8 @@ async def log_requests(request: Request, call_next):
 def on_startup():
     logger.debug(f"Redirect url: {REDIRECT_URI} \n FRONTEND_URL: {FRONTEND_URL}")
     logger.debug("Creating tables for Database")
+    # NOTE: In production, use Alembic migrations (alembic upgrade head) instead of this.
+    # This is kept for development/testing convenience only.
     create_db_and_tables()
 
 

@@ -1,3 +1,3 @@
-from sqlalchemy.ext.declarative import declarative_base
+from .base import Base
 
-Base = declarative_base()
+__all__ = ["Base"]
