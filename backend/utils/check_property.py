@@ -1,10 +1,8 @@
-from fastapi import HTTPException
 from redis import Redis
 from starlette.requests import Request
 
-from backend.dependencies import logger
 from backend.models.chat import Chat
-from backend.utils.jwt import decode_jwt
+from backend.utils import verify_session_and_get_user_id
 
 
 def check_property_belongs_to_user(request_from_route: Request, redis_client: Redis, chat: "Chat"):
@@ -27,13 +25,7 @@ def check_property_belongs_to_user(request_from_route: Request, redis_client: Re
     Raises:
         HTTPException: If session ID cookie is not found (404 error)
     """
-    session_id = request_from_route.cookies.get("session_id")
-    if not session_id:
-        logger.error("Session id cookie not found")
-        raise HTTPException(status_code=404, detail="Session ID not found")
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request_from_route, redis_client)
     if chat.user_id != user_id:
         return False, None
     else:

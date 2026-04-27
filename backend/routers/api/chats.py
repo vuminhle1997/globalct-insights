@@ -48,7 +48,7 @@ from backend.services.tools_initializer import (
     create_url_loader_tool,
 )
 from backend.utils.check_property import check_property_belongs_to_user
-from backend.utils.jwt import decode_jwt
+from backend.utils import verify_session_and_get_user_id
 from backend.utils.upload_sql_dump import delete_database_from_postgres, detect_sql_dump_type
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
@@ -318,13 +318,7 @@ async def get_all_chats(
     - 404: If the session ID is not found in cookies or the user is not authenticated.
     """
     query = db_client.query(Chat)
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error("Session id not found in cookies")
-        raise HTTPException(status_code=404, detail="Not found")
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
     query = query.filter(Chat.user_id == user_id).order_by(Chat.last_interacted_at.desc())
     page = sqlalchemy_pagination(query)
     return page
@@ -353,13 +347,7 @@ async def get_chats_by_title(
     **Raises**:
     - 404: If the session ID is not found in cookies or the user is not authenticated.
     """
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error("Session id not found in cookies")
-        raise HTTPException(status_code=404, detail="Not found")
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
     chats = db_client.query(Chat).filter(Chat.title.like(f"%{title}%")).filter(Chat.user_id == user_id).all()
 
     return chats
@@ -869,14 +857,7 @@ async def create_chat(
     - 404: If the session ID is not found in cookies.
     - 400: If the avatar image format is invalid.
     """
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error("Session id cookie not found")
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
 
     chat_id = str(uuid.uuid4())
     avatar_path = None

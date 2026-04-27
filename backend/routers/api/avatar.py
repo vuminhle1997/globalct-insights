@@ -7,7 +7,7 @@ from starlette.requests import Request
 from backend.dependencies import get_db_session, get_redis_client, logger
 from backend.models.chat import Chat
 from backend.routers.custom_router import APIRouter
-from backend.utils.jwt import decode_jwt
+from backend.utils import verify_session_and_get_user_id
 
 router = APIRouter(
     prefix="/avatar",
@@ -29,13 +29,7 @@ async def get_avatar_of_chat(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
     if db_chat.user_id != user_id:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to you")

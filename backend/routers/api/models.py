@@ -2,12 +2,13 @@ import os
 from pathlib import Path
 
 import yaml
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from redis import Redis
 from starlette.requests import Request
 
 from backend.dependencies import get_redis_client
 from backend.routers.custom_router import APIRouter
+from backend.utils import verify_session_exists
 
 router = APIRouter(
     prefix="/models",
@@ -32,10 +33,5 @@ def get_models(
     redis_client: Redis = Depends(get_redis_client),
 ):
 
-    if not request.cookies.get("session_id"):
-        raise HTTPException(status_code=404, detail="Session ID not found")
-
-    claims = redis_client.get(f"session:{request.cookies.get('session_id')}")
-    if not claims:
-        raise HTTPException(status_code=404, detail="Invalid session ID")
+    verify_session_exists(request, redis_client)
     return get_models_from_yaml()
