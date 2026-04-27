@@ -167,3 +167,50 @@ Ensure the following services are running and properly configured:
 - The backend is designed to work seamlessly with the frontend and other components of the system.
 - Refer to the `.env.example` file for all required environment variables.
 - Use the provided [Jupyter notebooks](../notebooks) for prototyping and testing LLM workflows.
+
+## Database Migrations with Alembic
+
+The project uses **Alembic** for managing database schema migrations. This ensures version-controlled, reproducible database changes.
+
+### Creating a New Migration
+
+After modifying a model, generate a migration automatically:
+
+```bash
+cd backend
+poetry run alembic revision --autogenerate -m "Description of changes"
+```
+
+Review the generated migration file in `alembic/versions/` and make any manual adjustments if needed.
+
+### Running Migrations
+
+To apply all pending migrations to the database:
+
+```bash
+cd backend
+poetry run alembic upgrade head
+```
+
+### Viewing Migration History
+
+```bash
+cd backend
+poetry run alembic history
+```
+
+### Downgrading Database
+
+To rollback to a previous version:
+
+```bash
+cd backend
+poetry run alembic downgrade -1  # Go back one revision
+```
+
+### Important Notes
+
+- **Development**: The application still supports `create_db_and_tables()` for quick development setup, but this should not be used in production.
+- **Production**: Always use `alembic upgrade head` to apply migrations.
+- **Version Control**: Always commit migration files to git. Never modify existing migration files in version control.
+- **Environment Variables**: Database connection is configured via `PG_*` environment variables in `alembic/env.py`.
