@@ -21,12 +21,24 @@ from backend.dependencies import base_url, create_db_and_tables, get_redis_clien
 from backend.routers.route import router
 from backend.utils.jwt import decode_jwt
 
+
+def _is_endpoint_reachable(url: str, timeout: float = 1.0) -> bool:
+    """Return True when an HTTP endpoint is reachable (status code is irrelevant)."""
+    try:
+        response = requests.get(url, timeout=timeout)
+        return response.status_code >= 100
+    except requests.RequestException:
+        return False
+
+
 # loads envs and setup Phoenix monitoring
 try:
     load_dotenv()
     phoenix_key, phoenix_url = os.getenv("PHOENIX_API_KEY"), os.getenv("PHOENIX_URL")
-    if phoenix_key is None and phoenix_url is None:
-        logger.error("No Phoenix API key or URL found, skipping Arize Phoenix Tracing setup")
+    if not phoenix_key or not phoenix_url:
+        logger.info("Phoenix tracing disabled: PHOENIX_API_KEY or PHOENIX_URL is missing")
+    elif not _is_endpoint_reachable(phoenix_url):
+        logger.warning(f"Phoenix tracing disabled: endpoint unreachable at {phoenix_url}")
     else:
         from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
         from phoenix.otel import register
@@ -102,7 +114,7 @@ else:
     from llama_index.llms.google_genai import GoogleGenAI
 
     llm = GoogleGenAI(model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"), temperature=0.75)
-    embed_model = GoogleGenAIEmbedding(model_name=os.getenv("GOOGLE_EMBED_MODEL", "gemini-embedding-2.0"))
+    embed_model = GoogleGenAIEmbedding()
 
 # Set global settings for LLM and embedding model
 Settings.llm = llm

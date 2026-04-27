@@ -17,6 +17,7 @@ from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage as LLMChatMessage, MessageRole
 from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.settings import Settings
 from llama_index.core.tools import BaseTool
 from llama_index.llms.ollama import Ollama
 from llama_index.vector_stores.chroma import ChromaVectorStore
@@ -215,6 +216,7 @@ async def stream_agent_response(
         - Logs errors and warnings related to streaming and database operations.
     """
     full_response_text = ""
+    async_generator = None
     try:
         async_generator = agent.run(user_msg=user_input, memory=chat_memory)
 
@@ -230,6 +232,22 @@ async def stream_agent_response(
                 # Format as Server-Sent Event (SSE)
                 yield f"data: {json.dumps({'value': delta})}\n\n"
                 await asyncio.sleep(0.1)
+
+        # Some agent implementations may complete without delta events.
+        if not full_response_text and async_generator is not None:
+            try:
+                final_response = await async_generator
+                final_text = None
+                if isinstance(final_response, str):
+                    final_text = final_response
+                elif hasattr(final_response, "response") and final_response.response:
+                    final_text = final_response.response
+
+                if final_text:
+                    full_response_text = str(final_text)
+                    yield f"data: {json.dumps({'value': full_response_text})}\n\n"
+            except Exception as final_err:
+                logger.warning(f"Could not resolve final agent response for chat {chat_id}: {final_err}")
 
         # Signal the end of the stream
         yield f"data: {json.dumps({'status': 'done'})}\n\n"
@@ -478,7 +496,7 @@ async def chat_stream(
     else:
         model_from_chat = "llama3.3:70b"
 
-    provider = os.getenv("LLM_PROVIDER", "OLLAMA")
+    provider = (db_chat.model_provider or "GOOGLE_GENAI").upper()
     llm = None
 
     if provider == "OLLAMA":
@@ -490,6 +508,18 @@ async def chat_stream(
         )
     elif provider == "IONOS":
         llm = initialize_ionos_llm(temperature=db_chat.temperature)
+    elif provider == "GOOGLE_GENAI":
+        from llama_index.llms.google_genai import GoogleGenAI
+
+        llm = GoogleGenAI(model=model_from_chat, temperature=db_chat.temperature)
+
+    # Fall back to globally configured LLM (e.g. GOOGLE provider from app startup).
+    if llm is None:
+        llm = Settings.llm
+
+    if llm is None:
+        logger.error("No LLM configured for chat stream (provider=%s)", provider)
+        raise HTTPException(status_code=500, detail="No LLM configured. Check server model settings.")
 
     # new implementation of agent memory
     chat_memory = create_memory(
@@ -941,9 +971,19 @@ async def update_chat(
         with open(avatar_path, "wb+") as buffer:
             buffer.write(file.file.read())
 
-    # Update the entry
+    # Update mutable chat fields explicitly (SQLAlchemy model, no sqlmodel_update helper).
     chat_data = json.loads(chat)
-    db_chat.sqlmodel_update(chat_data)
+    updatable_fields = {
+        "title",
+        "description",
+        "context",
+        "temperature",
+        "model",
+        "model_provider",
+    }
+    for field_name in updatable_fields:
+        if field_name in chat_data:
+            setattr(db_chat, field_name, chat_data[field_name])
     if avatar_path:
         db_chat.avatar_path = str(avatar_path)
 

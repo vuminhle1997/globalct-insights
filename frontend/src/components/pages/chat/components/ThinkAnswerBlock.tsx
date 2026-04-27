@@ -24,7 +24,12 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
   // Memoize parsing so we don't redo work or change references unless response changes
   const parsed = React.useMemo(() => parseAgentResponse(response), [response]);
 
-  const [showTrajectories, setShowTrajectories] = React.useState(true);
+  const hasReasoningBlocks = React.useMemo(
+    () => parsed.some(b => b.type === 'Thought' || b.type === 'Observation'),
+    [parsed]
+  );
+
+  const [showTrajectories, setShowTrajectories] = React.useState(false);
 
   const handleToggle = () => {
     setShowTrajectories(!showTrajectories);
@@ -32,35 +37,37 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
 
   return (
     <div className="space-y-4 my-4">
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="w-full text-left my-2 flex flex-row justify-between items-center px-2 py-1 rounded hover:bg-muted/50 transition-colors"
-        aria-expanded={showTrajectories}
-        aria-label={
-          showTrajectories
-            ? 'Gedankenprozess verbergen'
-            : 'Gedankenprozess anzeigen'
-        }
-      >
-        <Label className="cursor-pointer">Gedankenprozess</Label>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`ml-2 transition-transform duration-200 ${
-            showTrajectories ? 'rotate-180' : ''
-          }`}
+      {hasReasoningBlocks && (
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="w-full text-left my-2 flex flex-row justify-between items-center px-2 py-1 rounded hover:bg-muted/50 transition-colors"
+          aria-expanded={showTrajectories}
+          aria-label={
+            showTrajectories
+              ? 'Gedankenprozess verbergen'
+              : 'Gedankenprozess anzeigen'
+          }
         >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
+          <Label className="cursor-pointer">Gedankenprozess</Label>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`ml-2 transition-transform duration-200 ${
+              showTrajectories ? 'rotate-180' : ''
+            }`}
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+      )}
 
       {/* When collapsed, we only show Answer blocks; when expanded we show all */}
       {(showTrajectories

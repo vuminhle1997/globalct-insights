@@ -16,7 +16,7 @@ DEFAULT_MAX_TOKEN_LIMIT = 128_000  # Aligns with planned usage of 128K-context O
 
 def create_memory(
     chat_id: str,
-    llm: LLM,
+    llm: LLM | None,
     messages: Sequence[LLMChatMessage] | None = None,
     vector_store: ChromaVectorStore | None = None,
     *,
@@ -39,8 +39,9 @@ def create_memory(
     ----------
     chat_id : str
         Unique session identifier (also used as memory session_id).
-    llm : LLM
+    llm : LLM | None
         The language model used for fact extraction and downstream reasoning.
+        If None, falls back to ``Settings.llm``.
     messages : Sequence[LLMChatMessage], optional
         Historical messages to seed the memory. If None or empty, seeding is skipped.
     vector_store : ChromaVectorStore, optional
@@ -76,6 +77,11 @@ def create_memory(
 
     if token_limit <= 0:
         raise ValueError("token_limit must be positive")
+
+    if llm is None:
+        llm = Settings.llm
+    if llm is None:
+        raise RuntimeError("No LLM configured for memory creation. Pass an llm explicitly or set Settings.llm.")
 
     # Derive default flush size adaptively if not provided.
     if token_flush_size is None:

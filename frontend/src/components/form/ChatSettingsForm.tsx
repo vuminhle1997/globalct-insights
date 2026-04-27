@@ -39,6 +39,7 @@ type FormData = {
   avatar?: FileList;
   temperature: number;
   model: string;
+  model_provider: string;
 };
 
 export interface ChatSettingsFormProps {
@@ -98,8 +99,6 @@ export default function ChatSettingsForm({
 }: ChatSettingsFormProps) {
   const models = useAppSelector(selectLLMModels);
   const isPending = mode === 'create' ? isCreating : isUpdating;
-
-  console.log(models, "FROM Setting")
   return (
     <>
       <form

@@ -76,12 +76,17 @@ async def get_messages_by_chat_id(
     token = redis_client.get(f"session:{session_id}")
     claims = decode_jwt(token)
     user_id = claims["oid"]
+
+    chat: Chat | None = db_client.get(Chat, chat_id)
+    if chat is None:
+        logger.error(f"Chat {chat_id} not found")
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    if chat.user_id != user_id:
+        logger.error(f"Chat {chat_id} does not belong to {user_id}")
+        raise HTTPException(status_code=404, detail="Chat does not belong to you")
+
     query = query.filter(ChatMessage.chat_id == chat_id).order_by(ChatMessage.created_at.desc())
     page = sqlalchemy_pagination(query)
-    chat: Chat | None = page.items[0].chat if len(page.items) > 0 else None
-
-    if chat and not chat.user_id == user_id:
-        logger.error(f"Chat {chat.chat_id} does not belong to {user_id}")
-        raise HTTPException(status_code=404, detail="Chat does not belong to you")
 
     return page

@@ -44,6 +44,7 @@ type FormData = {
   avatar?: FileList;
   temperature: number;
   model: string;
+  model_provider: string;
 };
 
 interface ChatEntryFormProps {
@@ -119,9 +120,11 @@ export default function ChatEntryForm({
           avatar: undefined,
           temperature: chat.temperature,
           model: chat.model || 'gemini-3.1-flash-lite-preview',
+          model_provider: chat.model_provider || 'GOOGLE_GENAI',
         }
       : {
           model: 'gemini-3.1-flash-lite-preview',
+          model_provider: 'GOOGLE_GENAI',
         },
   });
   const [showError, setShowError] = useState(false);

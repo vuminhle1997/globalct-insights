@@ -17,5 +17,5 @@ models:
   - name: "GOOGLE_GENAI_EMBEDDING"
     description: "Gemini Embedding 2.0 ist ein spezialisiertes Modell von Google GenAI, das für die Erstellung von hochwertigen Einbettungen entwickelt wurde, ideal für Aufgaben wie semantische Suche und Ähnlichkeitsanalyse."
     llm_provider: "GOOGLE_GENAI"
-    llm_model: "gemini-embedding-2.0"
+    llm_model: "gemini-embedding-2.0-preview"
     type: "embedding"

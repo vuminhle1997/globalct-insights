@@ -34,6 +34,7 @@ class Chat(Base):
     avatar_path: Mapped[str] = mapped_column(String, nullable=False)
     temperature: Mapped[float] = mapped_column(Float, nullable=False, index=True, default=0.75)
     model: Mapped[str] = mapped_column(String, nullable=False, index=True, default="llama3.1")
+    model_provider: Mapped[str] = mapped_column(String, nullable=False, index=True, default="GOOGLE_GENAI")
 
     files: Mapped[list["ChatFile"]] = relationship("ChatFile", back_populates="chat", cascade="all, delete")
     favourite: Mapped["Favourite"] = relationship("Favourite", back_populates="chat", cascade="all, delete")
@@ -54,6 +55,7 @@ class ChatPublic(BaseModel):
     avatar_path: str
     temperature: float
     model: str
+    model_provider: str
     files: list[ChatFilePublic] = Field(default_factory=list)
 
 
@@ -62,6 +64,7 @@ class ChatCreate(BaseModel):
     temperature: float
     description: str | None
     context: str
+    model_provider: str = "GOOGLE_GENAI"
 
 
 class ChatUpdate(BaseModel):
@@ -69,6 +72,7 @@ class ChatUpdate(BaseModel):
     temperature: float
     description: str | None
     context: str
+    model_provider: str = "GOOGLE_GENAI"
 
 
 class ChatParams(BaseModel):

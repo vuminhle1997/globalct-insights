@@ -22,6 +22,7 @@ export type Chat = {
   context: string;
   temperature: number;
   model: string;
+  model_provider: 'GOOGLE_GENAI' | 'OPENAI' | 'AZURE_OPENAI' | 'HUGGINGFACE' | 'CUSTOM' | 'IONOS' | 'OLLAMA';
   created_at: string;
   updated_at: string;
   last_interacted_at: string;
