@@ -22,7 +22,7 @@ RUN apt-get update \
     cl-babel \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/dimitri/pgloader.git /opt/src/pgloader 
+RUN git clone https://github.com/dimitri/pgloader.git /opt/src/pgloader
 
 ARG DYNSIZE=16384
 
@@ -31,6 +31,10 @@ RUN mkdir -p /opt/src/pgloader/build/bin \
     && make DYNSIZE=$DYNSIZE clones save
 
 FROM python:3.12-slim-bookworm
+
+ENV POETRY_VERSION=2.1.4 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_NO_INTERACTION=1
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -47,17 +51,18 @@ RUN apt-get update \
     python3-pip \
     python3-venv \
     && update-ca-certificates \
+    && pip install --no-cache-dir "poetry==${POETRY_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /opt/src/pgloader/build/bin/pgloader /usr/local/bin
 
 WORKDIR /var/app/backend
 
-COPY . .
-RUN mkdir -p /var/app/backend/uploads/avatars
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-root --only main --no-ansi
 
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+COPY . ./
+RUN mkdir -p /var/app/backend/uploads/avatars
 
 ENV PYTHONPATH=/var/app/backend
 ENV PORT=4000

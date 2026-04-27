@@ -1,7 +1,8 @@
 import logging
 import logging.handlers
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 
 def setup_logging():
     """
@@ -29,7 +30,7 @@ def setup_logging():
     # Formatter
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # Info file handler
@@ -38,7 +39,7 @@ def setup_logging():
         when="midnight",
         interval=1,
         backupCount=7,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     info_handler.setLevel(logging.INFO)
     info_handler.setFormatter(formatter)
@@ -50,7 +51,7 @@ def setup_logging():
         when="midnight",
         interval=1,
         backupCount=7,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
@@ -61,7 +62,7 @@ def setup_logging():
         when="midnight",
         interval=1,
         backupCount=7,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     debug_handler.setLevel(logging.DEBUG)
     debug_handler.setFormatter(formatter)

@@ -14,11 +14,14 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.get("/{chat_id}")
-async def get_avatar_of_chat(chat_id: str,
-                             request: Request,
-                             db_client: Session = Depends(get_db_session),
-                             redis_client: Redis = Depends(get_redis_client)):
+async def get_avatar_of_chat(
+    chat_id: str,
+    request: Request,
+    db_client: Session = Depends(get_db_session),
+    redis_client: Redis = Depends(get_redis_client),
+):
     db_chat = db_client.get(Chat, chat_id)
 
     if not db_chat:
@@ -38,4 +41,3 @@ async def get_avatar_of_chat(chat_id: str,
 
     # Get avatar file path and return file response
     return FileResponse(db_chat.avatar_path)
-    

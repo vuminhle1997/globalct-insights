@@ -1,24 +1,23 @@
-from llama_index.core.objects import SQLTableNodeMapping, SQLTableSchema
-from llama_index.core.readers import SimpleDirectoryReader
-from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.core import StorageContext, SQLDatabase
-from llama_index.core.indices import VectorStoreIndex
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.settings import Settings
+import os
 
 from chromadb import Collection
-from sqlalchemy import create_engine
+from dependencies import SessionDep, logger
+from llama_index.core import SQLDatabase, StorageContext
+from llama_index.core.indices import VectorStoreIndex
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.objects import SQLTableNodeMapping, SQLTableSchema
+from llama_index.core.readers import SimpleDirectoryReader
+from llama_index.core.settings import Settings
+from llama_index.vector_stores.chroma import ChromaVectorStore
 from markitdown import MarkItDown
-
 from models import ChatFile
+from sqlalchemy import create_engine
 from utils import initialize_pg_url
-from dependencies import logger, SessionDep
 
-import os
 
 def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: SessionDep):
     """
-    Indexes a spreadsheet file by converting it to Markdown, splitting it into chunks, 
+    Indexes a spreadsheet file by converting it to Markdown, splitting it into chunks,
     and storing the resulting vectorized data in a Chroma vector store.
 
     Args:
@@ -50,13 +49,13 @@ def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: 
     md_path = f"{os.getcwd()}/uploads/{file.chat_id}/{file.file_name.split('.')[0]}.md"
     result = md.convert(file.path_name)
 
-    with open(md_path, "w", encoding='utf-8') as f:
+    with open(md_path, "w", encoding="utf-8") as f:
         f.write(result.text_content)
 
     documents = SimpleDirectoryReader(input_files=[md_path]).load_data()
     for document in documents:
         document.metadata = {
-            'file_id': id,
+            "file_id": id,
         }
 
     chroma_vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
@@ -65,12 +64,15 @@ def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: 
         chunk_size=256,
         chunk_overlap=20,
     )
-    VectorStoreIndex.from_documents(documents=documents,
-                                    storage_context=storage_context,
-                                    vector_store=chroma_vector_store,
-                                    transformations=[transformations],
-                                    show_progress=True, embedding=Settings.embed_model)
-    logger.info('Indexed spreadsheet.')
+    VectorStoreIndex.from_documents(
+        documents=documents,
+        storage_context=storage_context,
+        vector_store=chroma_vector_store,
+        transformations=[transformations],
+        show_progress=True,
+        embedding=Settings.embed_model,
+    )
+    logger.info("Indexed spreadsheet.")
 
     try:
         db_file = db_client.get(ChatFile, id)
@@ -104,15 +106,19 @@ def index_uploaded_file(path: str, chat_file: ChatFile, chroma_collection: Colle
     documents = SimpleDirectoryReader(input_files=[path]).load_data()
     for document in documents:
         document.metadata = {
-            'file_id': chat_file.id,
+            "file_id": chat_file.id,
         }
 
     vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
-    VectorStoreIndex.from_documents(documents=documents,
-                                    storage_context=storage_context,
-                                    vector_store=vector_store, show_progress=True, embedding=Settings.embed_model)
+    VectorStoreIndex.from_documents(
+        documents=documents,
+        storage_context=storage_context,
+        vector_store=vector_store,
+        show_progress=True,
+        embedding=Settings.embed_model,
+    )
     try:
         chat_file = db_client.get(ChatFile, chat_file.id)
         chat_file.indexed = True
@@ -132,13 +138,13 @@ def index_sql_dump(file: ChatFile, chroma_collection: Collection):
     for the specified tables in the SQL database.
 
     Args:
-        file (ChatFile): An object containing metadata about the SQL dump, 
+        file (ChatFile): An object containing metadata about the SQL dump,
             including the database name and the list of tables to index.
-        chroma_collection (Collection): A Chroma collection used as the 
+        chroma_collection (Collection): A Chroma collection used as the
             backend for the vector store.
 
     Raises:
-        Any exceptions raised during database connection, vector store 
+        Any exceptions raised during database connection, vector store
         initialization, or indexing will propagate to the caller.
 
     Returns:
@@ -162,8 +168,8 @@ def index_sql_dump(file: ChatFile, chroma_collection: Collection):
         nodes = tables_node_mapping.to_nodes(objs=table_schema_objs)
         for node in nodes:
             # Preserve any existing metadata and append our own
-            base_meta = getattr(node, 'metadata', {}) or {}
-            base_meta.update({'file_id': file.id})
+            base_meta = getattr(node, "metadata", {}) or {}
+            base_meta.update({"file_id": file.id})
             node.metadata = base_meta
 
         # Directly build a VectorStoreIndex from nodes (no ObjectIndex indirection needed here)
@@ -193,10 +199,10 @@ def deletes_file_index_from_collection(file_id: str, chroma_collection: Collecti
         - Logs an error if no documents are found for the given 'file_id' after the deletion process.
 
     Note:
-        Ensure that the `chroma_collection` object supports the `delete` and `get` methods with the 
+        Ensure that the `chroma_collection` object supports the `delete` and `get` methods with the
         specified query format.
     """
-    chroma_collection.delete(where={'file_id': {'$eq': file_id}})
-    docs = chroma_collection.get(where={'file_id': {'$eq': file_id}})
-    if len(docs['metadatas']) <= 0:
-        logger.error('No documents found for file_id', file_id, 'Deleted file: ', file_id)
+    chroma_collection.delete(where={"file_id": {"$eq": file_id}})
+    docs = chroma_collection.get(where={"file_id": {"$eq": file_id}})
+    if len(docs["metadatas"]) <= 0:
+        logger.error("No documents found for file_id", file_id, "Deleted file: ", file_id)

@@ -1,9 +1,11 @@
-from starlette.requests import Request
-from redis import Redis
-from models.chat import Chat
-from fastapi import HTTPException
-from .jwt import decode_jwt
 from dependencies import logger
+from fastapi import HTTPException
+from models.chat import Chat
+from redis import Redis
+from starlette.requests import Request
+
+from backend.utils.jwt import decode_jwt
+
 
 def check_property_belongs_to_user(request_from_route: Request, redis_client: Redis, chat: "Chat"):
     """

@@ -1,5 +1,5 @@
-from routers.custom_router import APIRouter
-from .api import chats, avatar, favourites, messages, users
+from backend.routers.api import avatar, chats, favourites, messages, users
+from backend.routers.custom_router import APIRouter
 
 router = APIRouter(
     prefix="/api",

@@ -20,10 +20,13 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.get("/", response_model=Page[Favourite])
-async def get_favourites_of_user(request: Request = Request,
-                                 redis_client: Redis = Depends(get_redis_client),
-                                 db_client: Session = Depends(get_db_session)):
+async def get_favourites_of_user(
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    db_client: Session = Depends(get_db_session),
+):
     """
     Retrieve paginated list of favourites for the authenticated user.
 
@@ -84,15 +87,20 @@ async def get_favourites_of_user(request: Request = Request,
         {
             **item.model_dump(),
             "chat": item.chat,
-        } for item in items
+        }
+        for item in items
     ]
     page.items = items
     return page
 
+
 @router.get("/{chat_id}")
-async def get_favourite_of_chat(chat_id: str, request: Request = Request,
-                                redis_client: Redis = Depends(get_redis_client),
-                                db_client: Session = Depends(get_db_session)):
+async def get_favourite_of_chat(
+    chat_id: str,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    db_client: Session = Depends(get_db_session),
+):
     """
     Retrieve the favourite status of a specific chat.
 
@@ -130,7 +138,9 @@ async def get_favourite_of_chat(chat_id: str, request: Request = Request,
             }
         }
     """
-    db_chat: Optional[Chat] = db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
+    db_chat: Optional[Chat] = (
+        db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
+    )
     if not db_chat:
         logger.error(f"Chat {chat_id} not found in database")
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -142,17 +152,16 @@ async def get_favourite_of_chat(chat_id: str, request: Request = Request,
     if not db_chat.favourite:
         logger.error(f"Favourite for chat {chat_id} not found in database")
         raise HTTPException(status_code=404, detail="Favourite not found")
-    return {
-        **db_chat.model_dump(),
-        "favourite": db_chat.favourite
-    }
+    return {**db_chat.model_dump(), "favourite": db_chat.favourite}
 
 
 @router.post("/{chat_id}")
-async def favour_chat_by_id(chat_id: str,
-                            request: Request,
-                            redis_client: Redis = Depends(get_redis_client),
-                            db_client: Session = Depends(get_db_session)):
+async def favour_chat_by_id(
+    chat_id: str,
+    request: Request,
+    redis_client: Redis = Depends(get_redis_client),
+    db_client: Session = Depends(get_db_session),
+):
     """
     Mark a chat as a favourite for the authenticated user.
 
@@ -184,8 +193,12 @@ async def favour_chat_by_id(chat_id: str,
             "chat_id": "chat123"
         }
     """
-    db_chat: Type[Chat] = db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
-    belongs_to_user, user_id = check_property_belongs_to_user(request, redis_client, db_chat)
+    db_chat: Type[Chat] = (
+        db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
+    )
+    belongs_to_user, user_id = check_property_belongs_to_user(
+        request, redis_client, db_chat
+    )
 
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
@@ -203,7 +216,11 @@ async def favour_chat_by_id(chat_id: str,
         db_client.commit()
         db_client.refresh(db_favourites)
         # Reload the favourite with chat relationship
-        db_favourites = db_client.query(Favourite).options(selectinload(Favourite.chat)).get(db_favourites.id)
+        db_favourites = (
+            db_client.query(Favourite)
+            .options(selectinload(Favourite.chat))
+            .get(db_favourites.id)
+        )
         return {
             **db_favourites.model_dump(),
         }
@@ -211,11 +228,14 @@ async def favour_chat_by_id(chat_id: str,
         logger.error(e)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.delete("/{chat_id}")
-async def delete_favourite_of_chat_by(chat_id: str,
-                                      request: Request = Request,
-                                      redis_client: Redis = Depends(get_redis_client),
-                                      db_client: Session = Depends(get_db_session)):
+async def delete_favourite_of_chat_by(
+    chat_id: str,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    db_client: Session = Depends(get_db_session),
+):
     """
     Remove the favourite status of a specific chat.
 
@@ -252,8 +272,12 @@ async def delete_favourite_of_chat_by(chat_id: str,
             }
         }
     """
-    db_chat: Type[Chat] = db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
-    belongs_to_user, user_id = check_property_belongs_to_user(request, redis_client, db_chat)
+    db_chat: Type[Chat] = (
+        db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
+    )
+    belongs_to_user, user_id = check_property_belongs_to_user(
+        request, redis_client, db_chat
+    )
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")
