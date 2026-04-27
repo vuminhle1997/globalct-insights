@@ -1,15 +1,16 @@
-from routers.custom_router import APIRouter
 from fastapi import Depends
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate as sqlalchemy_pagination
 from redis import Redis
 from sqlmodel import Session
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from dependencies import get_db_session, get_redis_client
-from utils import decode_jwt
-from models import Chat, ChatMessage
-from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlalchemy import paginate as sqlalchemy_pagination
-from dependencies import logger
+
+from backend.dependencies import get_db_session, get_redis_client, logger
+from backend.models.chat import Chat
+from backend.models.chat_message import ChatMessage, ChatMessagePublic
+from backend.routers.custom_router import APIRouter
+from backend.utils.jwt import decode_jwt
 
 router = APIRouter(
     prefix="/messages",
@@ -18,7 +19,7 @@ router = APIRouter(
 )
 
 
-@router.get("/{chat_id}", response_model=Page[ChatMessage])
+@router.get("/{chat_id}", response_model=Page[ChatMessagePublic])
 async def get_messages_by_chat_id(
     chat_id: str,
     request: Request = Request,
@@ -75,9 +76,7 @@ async def get_messages_by_chat_id(
     token = redis_client.get(f"session:{session_id}")
     claims = decode_jwt(token)
     user_id = claims["oid"]
-    query = query.filter(ChatMessage.chat_id == chat_id).order_by(
-        ChatMessage.created_at.desc()
-    )
+    query = query.filter(ChatMessage.chat_id == chat_id).order_by(ChatMessage.created_at.desc())
     page = sqlalchemy_pagination(query)
     chat: Chat | None = page.items[0].chat if len(page.items) > 0 else None
 

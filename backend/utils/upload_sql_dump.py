@@ -3,7 +3,8 @@ import re
 
 import mysql.connector
 import psycopg2
-from dependencies import logger
+
+from backend.dependencies import logger
 
 pg_host = os.getenv("PG_HOST", "localhost")
 pg_port = os.getenv("PG_PORT", 5432)

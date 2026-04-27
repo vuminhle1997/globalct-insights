@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from . import Base
+from backend.models import Base
+from backend.models.chat_file import ChatFilePublic
 
 if TYPE_CHECKING:
     from models.chat_file import ChatFile
@@ -34,18 +35,14 @@ class Chat(Base):
     temperature: Mapped[float] = mapped_column(Float, nullable=False, index=True, default=0.75)
     model: Mapped[str] = mapped_column(String, nullable=False, index=True, default="llama3.1")
 
-    files: Mapped[list["ChatFile"]] = relationship(
-        "ChatFile", back_populates="chat", cascade="all, delete"
-    )
-    favourite: Mapped["Favourite"] = relationship(
-        "Favourite", back_populates="chat", cascade="all, delete"
-    )
-    messages: Mapped[list["ChatMessage"]] = relationship(
-        "ChatMessage", back_populates="chat", cascade="all, delete"
-    )
+    files: Mapped[list["ChatFile"]] = relationship("ChatFile", back_populates="chat", cascade="all, delete")
+    favourite: Mapped["Favourite"] = relationship("Favourite", back_populates="chat", cascade="all, delete")
+    messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="chat", cascade="all, delete")
 
 
 class ChatPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     title: str
     description: str | None
@@ -53,7 +50,11 @@ class ChatPublic(BaseModel):
     user_id: str
     created_at: datetime
     updated_at: datetime
-    files: list["ChatFile"] = []
+    last_interacted_at: datetime
+    avatar_path: str
+    temperature: float
+    model: str
+    files: list[ChatFilePublic] = Field(default_factory=list)
 
 
 class ChatCreate(BaseModel):

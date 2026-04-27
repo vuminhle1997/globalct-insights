@@ -2,11 +2,11 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
-from sqlalchemy import ForeignKey, JSON, String, Boolean
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import JSON, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from . import Base
+from backend.models import Base
 
 if TYPE_CHECKING:
     from models.chat import Chat
@@ -20,9 +20,7 @@ class ChatFile(Base):
     path_name: Mapped[str] = mapped_column(String, index=True, nullable=False)
     mime_type: Mapped[str] = mapped_column(String, index=True, nullable=False)
     indexed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    chat_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("chats.id"), default=None
-    )
+    chat_id: Mapped[str | None] = mapped_column(String, ForeignKey("chats.id"), default=None)
     database_name: Mapped[str | None] = mapped_column(String, default=None, nullable=True, index=True)
     database_type: Mapped[str | None] = mapped_column(String, default=None, nullable=True, index=True)
     tables: Mapped[list[str] | None] = mapped_column(JSON, default=None, nullable=True)
@@ -33,6 +31,8 @@ class ChatFile(Base):
 
 
 class ChatFilePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     file_name: str
     path_name: str

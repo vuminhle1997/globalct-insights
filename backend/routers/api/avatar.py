@@ -1,12 +1,13 @@
+from fastapi import Depends, HTTPException
+from fastapi.responses import FileResponse
 from redis import Redis
 from sqlmodel import Session
 from starlette.requests import Request
-from routers.custom_router import APIRouter
-from fastapi import Depends, HTTPException
-from fastapi.responses import FileResponse
-from dependencies import get_db_session, get_redis_client, logger
-from utils import decode_jwt
-from models import Chat
+
+from backend.dependencies import get_db_session, get_redis_client, logger
+from backend.models.chat import Chat
+from backend.routers.custom_router import APIRouter
+from backend.utils.jwt import decode_jwt
 
 router = APIRouter(
     prefix="/avatar",

@@ -29,7 +29,7 @@ services:
     networks:
       - gct-apps
   redis:
-    image: redis:latest
+    image: redis:8.6.2-alpine
     container_name: gct-insight-chat-redis
     restart: always
     ports:
@@ -40,7 +40,7 @@ services:
     networks:
       - gct-apps
   chromadb:
-    image: chromadb/chroma:1.0.4
+    image: chromadb/chroma:1.5.8
     container_name: gct-insight-chat-chromadb
     restart: always
     ports:
@@ -65,7 +65,7 @@ services:
     networks:
       - gct-apps
   postgres:
-    image: postgres:latest
+    image: postgres:16-alpine
     container_name: gct-insight-chat-postgres
     restart: always
     ports:

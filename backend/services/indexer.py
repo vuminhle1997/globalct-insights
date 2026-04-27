@@ -1,7 +1,6 @@
 import os
 
 from chromadb import Collection
-from dependencies import SessionDep, logger
 from llama_index.core import SQLDatabase, StorageContext
 from llama_index.core.indices import VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
@@ -10,9 +9,11 @@ from llama_index.core.readers import SimpleDirectoryReader
 from llama_index.core.settings import Settings
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from markitdown import MarkItDown
-from models import ChatFile
 from sqlalchemy import create_engine
-from utils import initialize_pg_url
+
+from backend.dependencies import SessionDep, logger
+from backend.models.chat_file import ChatFile
+from backend.utils.upload_sql_dump import initialize_pg_url
 
 
 def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: SessionDep):

@@ -1,18 +1,15 @@
+import re
 import uuid
 
+import bcrypt
+from fastapi import Depends, Response
 from redis import Redis
 from sqlmodel import Session
-from routers.custom_router import APIRouter
-from fastapi import Depends, Response
 
-from dependencies import get_db_session, get_redis_client, logger
-from models.user import UserLogin
-from utils import create_jwt
-from models import UserCreate, User
-from typing import List
-
-import bcrypt
-import re
+from backend.dependencies import get_db_session, get_redis_client, logger
+from backend.models.user import User, UserCreate, UserLogin
+from backend.routers.custom_router import APIRouter
+from backend.utils.jwt import create_jwt
 
 email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
 
@@ -70,14 +67,10 @@ async def create_user(
         db_client.commit()
 
         session_id = str(uuid.uuid4())
-        jwt_token = create_jwt(
-            oid=db_user.id, name=user.name, last_name=user.last_name, email=user.email
-        )
+        jwt_token = create_jwt(oid=db_user.id, name=user.name, last_name=user.last_name, email=user.email)
         redis_client.setex(f"session:{session_id}", 3600, jwt_token)
         response = Response("Login successful.", status_code=200)
-        response.set_cookie(
-            "session_id", session_id, httponly=False, secure=False
-        )  # set on True when Production
+        response.set_cookie("session_id", session_id, httponly=False, secure=False)  # set on True when Production
         return response
     except Exception as e:
         logger.error(e)
@@ -118,15 +111,11 @@ async def login_user(
     if not user.password:
         return Response("Password is missing.", status_code=401)
     try:
-        db_user: List[User] | None = (
-            db_client.query(User).filter(User.email.like(f"%{user.email}%")).all()
-        )
+        db_user: list[User] | None = db_client.query(User).filter(User.email.like(f"%{user.email}%")).all()
 
         if db_user and len(db_user) > 0:
             db_user: User = db_user[0]
-            is_matching = bcrypt.checkpw(
-                user.password.encode(), db_user.hashed_password.encode()
-            )
+            is_matching = bcrypt.checkpw(user.password.encode(), db_user.hashed_password.encode())
             if is_matching:
                 session_id = str(uuid.uuid4())
                 jwt_token = create_jwt(

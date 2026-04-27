@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from . import Base
+from backend.models import Base
 
 
 class User(Base):

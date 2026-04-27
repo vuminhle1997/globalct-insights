@@ -3,7 +3,6 @@ import os
 import uuid
 
 import requests
-from dependencies import base_url, create_db_and_tables, get_redis_client, logger
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,11 +13,13 @@ from hypercorn.config import Config
 from llama_index.core.settings import Settings
 from msal import ConfidentialClientApplication
 from redis import Redis
-from routers import route
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse, Response
-from utils import decode_jwt
+
+from backend.dependencies import base_url, create_db_and_tables, get_redis_client, logger
+from backend.routers.route import router
+from backend.utils.jwt import decode_jwt
 
 # loads envs and setup Phoenix monitoring
 try:
@@ -124,7 +125,7 @@ origins = [
 azure_app = ConfidentialClientApplication(CLIENT_ID, CLIENT_SECRET, AUTHORITY)
 
 app = FastAPI()
-app.include_router(route.router)
+app.include_router(router)
 add_pagination(app)
 app.add_middleware(
     CORSMiddleware,
@@ -133,7 +134,9 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
-app.mount("/uploads/avatars", StaticFiles(directory="uploads/avatars"), name="avatar")
+# app.mount("/uploads/avatars", StaticFiles(directory="uploads/avatars"), name="avatar")
+
+app.mount("/uploads/avatars", StaticFiles(directory="backend/uploads/avatars"), name="avatar")
 
 
 def user_is_part_of_group(user_groups: list[str], allowed_groups: list[str]) -> bool:

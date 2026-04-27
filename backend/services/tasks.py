@@ -1,8 +1,11 @@
 from chromadb import Collection
-from dependencies import SessionDep, engine, logger
-from models import Chat, ChatFile
 from sqlmodel import Session
-from utils import (
+
+from backend.dependencies import SessionDep, engine, logger
+from backend.models.chat import Chat
+from backend.models.chat_file import ChatFile
+from backend.services.indexer import index_sql_dump
+from backend.utils.upload_sql_dump import (
     list_all_tables_from_db,
     load_dump_to_database,
     pg_host,
@@ -10,8 +13,6 @@ from utils import (
     pg_port,
     pg_user,
 )
-
-from services import index_sql_dump
 
 
 def process_dump_to_persist(

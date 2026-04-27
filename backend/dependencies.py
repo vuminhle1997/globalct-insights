@@ -6,9 +6,10 @@ import chromadb
 from dotenv import load_dotenv
 from fastapi import Depends
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from logging_config import setup_logging
 from redis import Redis
 from sqlmodel import Session, SQLModel, create_engine
+
+from backend.logging_config import setup_logging
 
 load_dotenv()
 

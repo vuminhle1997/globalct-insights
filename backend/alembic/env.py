@@ -1,5 +1,5 @@
-from logging.config import fileConfig
 import os
+from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -15,14 +15,11 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
+from models import chat, chat_file, chat_message, favourite, user  # noqa: F401
 from models.base import Base
-from models.chat_file import ChatFile
-from models.chat import Chat
-from models.favourite import Favourite
-from models.chat_message import ChatMessage
-from models.user import User
 
 target_metadata = Base.metadata
+
 
 # Get database URL from environment variables or use defaults
 def get_database_url():
@@ -49,7 +46,7 @@ def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     if url == "driver://user:password@localhost/dbname":
         url = get_database_url()
-    
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -69,11 +66,11 @@ def run_migrations_online() -> None:
 
     """
     configuration = config.get_section(config.config_ini_section, {})
-    
+
     # Override sqlalchemy.url with environment variable if available
     database_url = get_database_url()
     configuration["sqlalchemy.url"] = database_url
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

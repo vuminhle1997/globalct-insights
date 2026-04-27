@@ -16,11 +16,12 @@ from llama_index.llms.ollama import Ollama
 from llama_index.readers.web import BeautifulSoupWebReader
 from llama_index.tools.duckduckgo import DuckDuckGoSearchToolSpec
 from llama_index.vector_stores.chroma import ChromaVectorStore
-from models import Chat, ChatFile, FileParams
 from sqlalchemy import create_engine
-from utils import initialize_pg_url
 
+from backend.models.chat import Chat, FileParams
+from backend.models.chat_file import ChatFile
 from backend.utils.rag.pandas.pandas_query_engine import PandasQueryEngine
+from backend.utils.upload_sql_dump import initialize_pg_url
 
 
 def create_filters_for_files(files: list[ChatFile]):

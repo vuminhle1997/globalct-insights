@@ -1,9 +1,9 @@
-from dependencies import logger
 from fastapi import HTTPException
-from models.chat import Chat
 from redis import Redis
 from starlette.requests import Request
 
+from backend.dependencies import logger
+from backend.models.chat import Chat
 from backend.utils.jwt import decode_jwt
 
 

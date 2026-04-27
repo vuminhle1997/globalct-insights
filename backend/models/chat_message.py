@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from . import Base
+from backend.models import Base
 
 if TYPE_CHECKING:
     from models.chat import Chat
@@ -32,3 +32,15 @@ class ChatMessageCreate(BaseModel):
     additional_kwargs: dict
     block_type: str
     text: str
+
+
+class ChatMessagePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    role: str
+    additional_kwargs: dict
+    block_type: str
+    text: str
+    created_at: datetime
+    chat_id: str

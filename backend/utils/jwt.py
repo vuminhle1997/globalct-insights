@@ -2,8 +2,9 @@ import datetime
 import os
 
 import jwt
-from dependencies import logger
 from fastapi import HTTPException
+
+from backend.dependencies import logger
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 ALGORITHM = "HS256"
