@@ -279,7 +279,7 @@ export const templates = [
       'Ein hilfreicher KI-Begleiter für all Ihre Anfragen und Aufgaben.',
     avatar_path: softwareEngineerImage,
     temperature: 0.75,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-pro-preview',
     context: aiText,
   },
   {
@@ -288,7 +288,7 @@ export const templates = [
       'Ein intelligenter Assistent, der Ihre Anliegen versteht und gleichzeitig auf das passende Hintergrundwissen aus Ihren Dokumenten zugreift – für fundierte und treffende Antworten.',
     avatar_path: aiImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-flash-lite-preview',
     context: classicRAGText,
   },
   {
@@ -297,7 +297,7 @@ export const templates = [
       'Sie beschreiben, was Sie wissen möchten – die KI erstellt die passende SQL-Abfrage für Ihre Datenbank. Ideal für Analysen, Reports und Auswertungen.',
     avatar_path: engineerImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3-flash-preview',
     context: sqlText,
   },
   {
@@ -306,7 +306,7 @@ export const templates = [
       'Stellen Sie eine Frage oder laden Sie ein Dokument hoch – die Modelliererin findet die relevanten Informationen und bringt Klarheit in Ihre Daten.',
     avatar_path: hrImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-pro-preview',
     context: modellingText,
   },
   {
@@ -315,7 +315,7 @@ export const templates = [
       'Einfach hochladen – und die KI liest für Sie das Dokument aus. Perfekt für Verträge, Berichte oder Formulare.',
     avatar_path: extractionImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-pro-preview',
     context: textExtractorText,
   },
 ];

@@ -34,9 +34,9 @@ def _is_endpoint_reachable(url: str, timeout: float = 1.0) -> bool:
 # loads envs and setup Phoenix monitoring
 try:
     load_dotenv()
-    phoenix_key, phoenix_url = os.getenv("PHOENIX_API_KEY"), os.getenv("PHOENIX_URL")
+    phoenix_key, phoenix_url = os.getenv("PHOENIX_API_KEY"), os.getenv("PHOENIX_COLLECTOR_ENDPOINT")
     if not phoenix_key or not phoenix_url:
-        logger.info("Phoenix tracing disabled: PHOENIX_API_KEY or PHOENIX_URL is missing")
+        logger.info("Phoenix tracing disabled: PHOENIX_API_KEY or PHOENIX_COLLECTOR_ENDPOINT is missing")
     elif not _is_endpoint_reachable(phoenix_url):
         logger.warning(f"Phoenix tracing disabled: endpoint unreachable at {phoenix_url}")
     else:
@@ -45,10 +45,7 @@ try:
 
         logger.info(f"Setting up Arize Phoenix Tracing at: {phoenix_url}")
         tracer_provider = register(
-            project_name="llama-rag",
-            endpoint=f"{phoenix_url}/v1/traces",
-            set_global_tracer_provider=False,
-            batch=True,
+            project_name="globalct-insights", auto_instrument=True, batch=True, set_global_tracer_provider=False
         )
         LlamaIndexInstrumentor().instrument(tracer_provider=tracer_provider)
 except Exception as e:

@@ -284,7 +284,7 @@ export default function ChatSettingsForm({
                         >
                           <div className="flex flex-col justify-start items-start">
                             <div className="font-medium text-base text-left">
-                              {model.llm_model}
+                              {model.name} ({model.llm_hoster})
                             </div>
                             <div className="text-sm text-muted-foreground leading-snug text-left mt-1">
                               {model.description}
