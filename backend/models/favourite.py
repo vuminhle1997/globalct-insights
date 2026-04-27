@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from backend.models import Base
+from . import Base
 
 if TYPE_CHECKING:
     from models import Chat

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 from sqlmodel import Field, Relationship, SQLModel
 
-from backend.models import Base
+from . import Base
 
 if TYPE_CHECKING:
     from models.chat_file import ChatFile

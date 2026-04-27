@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
-from backend.models import Base
+from . import Base
 
 
 class UserBase(SQLModel):

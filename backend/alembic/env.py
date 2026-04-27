@@ -1,9 +1,8 @@
 from logging.config import fileConfig
-
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+import os
 
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,18 +15,23 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
+from sqlmodel import SQLModel
+from models.chat_file import ChatFile
+from models.chat import Chat
+from models.favourite import Favourite
+from models.chat_message import ChatMessage
+from models.user import User
 
-from models.chat_file import Base
-from models.chat import Base
-from models.favourite import Base
+target_metadata = SQLModel.metadata
 
-target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Get database URL from environment variables or use defaults
+def get_database_url():
+    pg_host = os.getenv("PG_HOST", "localhost")
+    pg_port = os.getenv("PG_PORT", "5432")
+    pg_user = os.getenv("PG_USER", "postgres")
+    pg_password = os.getenv("PG_PASSWORD", "password")
+    pg_collection = os.getenv("PG_COLLECTION", "llama-rag")
+    return f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_collection}"
 
 
 def run_migrations_offline() -> None:
@@ -43,6 +47,9 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    if url == "driver://user:password@localhost/dbname":
+        url = get_database_url()
+    
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -61,8 +68,14 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    configuration = config.get_section(config.config_ini_section, {})
+    
+    # Override sqlalchemy.url with environment variable if available
+    database_url = get_database_url()
+    configuration["sqlalchemy.url"] = database_url
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

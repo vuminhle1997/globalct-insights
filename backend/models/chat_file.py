@@ -6,7 +6,7 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import JSON
 from sqlmodel import Field, Relationship, SQLModel
 
-from backend.models import Base
+from . import Base
 
 if TYPE_CHECKING:
     from models.chat import Chat
