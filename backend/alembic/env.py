@@ -15,14 +15,14 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from sqlmodel import SQLModel
+from models.base import Base
 from models.chat_file import ChatFile
 from models.chat import Chat
 from models.favourite import Favourite
 from models.chat_message import ChatMessage
 from models.user import User
 
-target_metadata = SQLModel.metadata
+target_metadata = Base.metadata
 
 # Get database URL from environment variables or use defaults
 def get_database_url():

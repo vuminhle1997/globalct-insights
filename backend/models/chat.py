@@ -3,7 +3,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Float, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from . import Base
 
@@ -18,35 +19,41 @@ class FileParams(BaseModel):
     query_type: str
 
 
-class ChatBase(SQLModel):
-    title: str = Field(nullable=False, index=True)
-    description: str = Field(nullable=True, index=True)
-    context: str = Field(nullable=False)
-
-
-class Chat(ChatBase, Base, table=True):
+class Chat(Base):
     __tablename__ = "chats"
-    id: str = Field(primary_key=True, default=str(uuid.uuid4()))
-    created_at: datetime = Field(nullable=False, index=True, default=datetime.now())
-    updated_at: datetime = Field(nullable=False, index=True, default=datetime.now())
-    last_interacted_at: datetime = Field(nullable=False, index=True, default=datetime.now())
-    user_id: str = Field(nullable=False, index=True)
-    avatar_path: str = Field(nullable=False)
-    temperature: float = Field(nullable=False, index=True, default=0.75)
-    model: str = Field(nullable=False, index=True, default="llama3.1")
-    files: list["ChatFile"] = Relationship(back_populates="chat", sa_relationship_kwargs={"cascade": "all, delete"})
-    favourite: "Favourite" = Relationship(back_populates="chat", sa_relationship_kwargs={"cascade": "all, delete"})
-    messages: list["ChatMessage"] = Relationship(
-        back_populates="chat", sa_relationship_kwargs={"cascade": "all, delete"}
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    context: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, index=True, default=datetime.now)
+    last_interacted_at: Mapped[datetime] = mapped_column(nullable=False, index=True, default=datetime.now)
+    user_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    avatar_path: Mapped[str] = mapped_column(String, nullable=False)
+    temperature: Mapped[float] = mapped_column(Float, nullable=False, index=True, default=0.75)
+    model: Mapped[str] = mapped_column(String, nullable=False, index=True, default="llama3.1")
+
+    files: Mapped[list["ChatFile"]] = relationship(
+        "ChatFile", back_populates="chat", cascade="all, delete"
+    )
+    favourite: Mapped["Favourite"] = relationship(
+        "Favourite", back_populates="chat", cascade="all, delete"
+    )
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        "ChatMessage", back_populates="chat", cascade="all, delete"
     )
 
 
-class ChatPublic(ChatBase):
+class ChatPublic(BaseModel):
     id: str
+    title: str
+    description: str | None
+    context: str
     user_id: str
     created_at: datetime
     updated_at: datetime
-    files: list["ChatFile"]
+    files: list["ChatFile"] = []
 
 
 class ChatCreate(BaseModel):

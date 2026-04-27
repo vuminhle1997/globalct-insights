@@ -1,3 +1,3 @@
-from sqlmodel import SQLModel
+from .base import Base
 
-Base = SQLModel
+__all__ = ["Base"]
