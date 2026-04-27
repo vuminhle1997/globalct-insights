@@ -118,10 +118,10 @@ export default function ChatEntryForm({
           context: chat.context,
           avatar: undefined,
           temperature: chat.temperature,
-          model: chat.model || 'llama3.3:70b',
+          model: chat.model || 'gemini-3.1-flash-lite-preview',
         }
       : {
-          model: 'llama3.3:70b',
+          model: 'gemini-3.1-flash-lite-preview',
         },
   });
   const [showError, setShowError] = useState(false);
@@ -154,7 +154,7 @@ export default function ChatEntryForm({
     setValue('description', templateChat.description || '');
     setValue('context', templateChat.context || '');
     setValue('temperature', templateChat.temperature || 0.75);
-    setValue('model', templateChat.model || 'llama3.3:70b');
+    setValue('model', templateChat.model || 'gemini-3.1-flash-lite-preview');
 
     // Handle avatar based on template type
     if ('id' in templateChat) {

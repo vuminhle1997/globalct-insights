@@ -4,6 +4,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import { UserProfile } from '@/frontend/types';
 import { Chat } from '@/frontend/types';
+import { LLMModel } from '@/frontend/types/models';
 
 export interface FileParams {
   query_type?: string;
@@ -32,6 +33,7 @@ interface AppState {
   showCommands: boolean;
   theme: 'system' | 'dark' | 'light';
   query_params: Record<string, ChatParams>;
+  llm_models?: LLMModel[];
 }
 
 // Define the initial state using that type
@@ -45,6 +47,7 @@ const initialState: AppState = {
   showCommands: false,
   theme: 'system',
   query_params: {},
+  llm_models: [],
 };
 
 /**
@@ -103,6 +106,9 @@ export const appSlice = createSlice({
     ) => {
       state.query_params = action.payload;
     },
+    setLLMModels: (state, action: PayloadAction<LLMModel[]>) => {
+      state.llm_models = action.payload;
+    },
   },
 });
 
@@ -116,6 +122,7 @@ export const {
   setShowCommands,
   setAppTheme,
   setQueryParams,
+  setLLMModels,
 } = appSlice.actions;
 
 // Other code such as selectors can use the imported `RootState` type
@@ -130,5 +137,6 @@ export const selectAppState = (state: RootState) => state.app.appState;
 export const selectShowCommands = (state: RootState) => state.app.showCommands;
 export const selectAppTheme = (state: RootState) => state.app.theme;
 export const selectQueryParams = (state: RootState) => state.app.query_params;
+export const selectLLMModels = (state: RootState) => state.app.llm_models;
 
 export default appSlice.reducer;

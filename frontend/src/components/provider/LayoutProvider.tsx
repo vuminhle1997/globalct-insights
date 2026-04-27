@@ -7,6 +7,7 @@ import {
   selectShowCommands,
   setAppState,
   setFavouriteChats,
+  setLLMModels,
   setProfilePicture,
   setShowCommands,
   setUser,
@@ -31,6 +32,7 @@ import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
 import { Chat } from '@/frontend/types';
 import { v4 } from 'uuid';
 import { useRouter } from 'next/navigation';
+import { useGetModels } from '@/frontend/queries/models';
 
 /**
  * LayoutProvider component is responsible for providing layout context and managing
@@ -72,6 +74,7 @@ export default function LayoutProvider({
   const { data: authData, isLoading, error } = useAuth();
   const { profilePicture } = useGetProfilePicture();
   const { data: favouriteChats } = useGetFavourites(50, 1);
+  const { data: models } = useGetModels();
 
   const [value, setValue] = React.useState('');
   const [searchedChats, setSearchedChats] = React.useState<Chat[]>(chats || []);
@@ -154,6 +157,12 @@ export default function LayoutProvider({
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
   }, [dispatch, showCommands]);
+
+  useEffect(() => {
+    if (models) {
+      dispatch(setLLMModels(models.filter(model => model.type === 'llm')));
+    }
+  }, [models, dispatch]);
 
   return isAuthorized ? (
     <SidebarProvider

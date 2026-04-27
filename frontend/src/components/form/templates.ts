@@ -341,20 +341,6 @@ export const defaultModels = [
       'LLama 3.3 von Meta ist ein ausgewogenes Sprachmodell mit erweiterten Fähigkeiten zur logischen Schlussfolgerung, Problemlösung und natürlicher Sprachverarbeitung. Es bietet eine hervorragende Balance zwischen Leistung und Effizienz und eignet sich ideal für anspruchsvolle Anwendungen wie komplexe Textgenerierung, detaillierte Analysen und fortgeschrittene Konversationsaufgaben. Es unterstützt mehrere Sprachen und ist besonders gut in der Verarbeitung von Kontext und der Generierung präziser Antworten.',
     isDefault: true,
   },
-  // {
-  //   id: 'deepseek-r1:70b',
-  //   name: 'Deepseek-r1:70b',
-  //   description:
-  //     'Deepseek-r1:70b ist eine erweiterte Version des Deepseek-Modells, das für hochpräzise technische und wissenschaftliche Analysen entwickelt wurde. Es zeichnet sich durch außergewöhnliche Fähigkeiten in der logischen Argumentation und der Verarbeitung technischer Sprache aus. Ideal für Forschung, Datenverarbeitung und wissenschaftliche Berichte, bietet es eine hohe Genauigkeit und Kapazität für komplexe Aufgaben.',
-  //   isDefault: false,
-  // },
-  // {
-  //   id: 'phi4:17b',
-  //   name: 'Phi 4',
-  //   description:
-  //     'Phi 4 ist ein hochmodernes Sprachmodell, das für kreative Anwendungen und komplexe Textgenerierung optimiert ist. Es bietet außergewöhnliche Fähigkeiten in der Verarbeitung natürlicher Sprache, kreativen Problemlösung und der Generierung innovativer Inhalte. Besonders geeignet für Marketing, kreative Schreibprojekte und interaktive Konversationen, unterstützt es mehrere Sprachen und passt sich flexibel an verschiedene Kontexte an.',
-  //   isDefault: false,
-  // },
 ];
 
 /**

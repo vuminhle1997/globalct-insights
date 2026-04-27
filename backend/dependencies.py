@@ -4,7 +4,7 @@ from typing import Annotated
 # chroma
 import chromadb
 from dotenv import load_dotenv
-from fastapi import Depends
+from fastapi import Cookie, Depends, HTTPException
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from redis import Redis
 from sqlmodel import Session, SQLModel, create_engine
@@ -94,6 +94,20 @@ def get_chroma_collection():
     """
     chroma_collection = chroma_client.get_or_create_collection(CHROMA_COLLECTION)
     yield chroma_collection
+
+
+async def verify_session(session_id: str = Cookie(None)):
+    """Dependency to check if the user is authenticated via Redis Session Token."""
+    if not session_id:
+        logger.warning("Unauthorized access attempt without session token")
+        raise HTTPException(status_code=401, detail="Unauthorized - No session token provided")
+
+    expires_at = await get_redis_client().get(f"session:{session_id}")
+    if not expires_at:
+        logger.warning(f"Unauthorized access attempt with session token: {session_id}")
+        raise HTTPException(status_code=401, detail="Unauthorized - Session expired or invalid")
+
+    return session_id
 
 
 SessionDep = Annotated[Session, Depends(get_db_session)]

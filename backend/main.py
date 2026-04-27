@@ -84,7 +84,7 @@ if provider == "IONOS":
         default_headers=headers,
         embed_batch_size=10,
     )
-else:
+elif provider == "OLLAMA":
     from llama_index.embeddings.ollama import OllamaEmbedding
     from llama_index.llms.ollama import Ollama
 
@@ -97,6 +97,12 @@ else:
         model_name=os.getenv("OLLAMA_EMBED_MODEL", "mxbai-embed-large"),
         base_url=base_url,
     )
+else:
+    from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+    from llama_index.llms.google_genai import GoogleGenAI
+
+    llm = GoogleGenAI(model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"), temperature=0.75)
+    embed_model = GoogleGenAIEmbedding(model_name=os.getenv("GOOGLE_EMBED_MODEL", "gemini-embedding-2.0"))
 
 # Set global settings for LLM and embedding model
 Settings.llm = llm
