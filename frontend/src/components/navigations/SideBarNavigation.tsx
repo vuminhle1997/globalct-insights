@@ -72,6 +72,7 @@ export default function SideBarNavigation() {
       <SidebarHeader>
         <div className="flex justify-between">
           <div className="toggle-menu">
+            {' '}
             {appState === 'idle' ? (
               <TooltipProvider>
                 <Tooltip>

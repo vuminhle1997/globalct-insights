@@ -161,7 +161,7 @@ export default function FavouritesNavigation() {
               )}
             </CollapsibleTrigger>
           </SidebarGroupLabel>
-          <CollapsibleContent>
+          <CollapsibleContent asChild>
             <SidebarGroupContent>
               <SidebarMenu>
                 {favouriteChats &&
@@ -202,7 +202,7 @@ export default function FavouritesNavigation() {
                           <DropdownMenu>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger>
+                                <TooltipTrigger asChild>
                                   <DropdownMenuTrigger
                                     className="hover:bg-accent ml-2 w-[30px] h-[30px] 
                             flex justify-center items-center rounded-md cursor-pointer mt-1"

@@ -64,11 +64,15 @@ RUN poetry install --no-root --only main --no-ansi
 COPY . ./
 RUN mkdir -p /var/app/backend/uploads/avatars
 
+ARG PORT=4000
+
+LABEL maintainer="global CT Services & Consulting GmbH"
+
 ENV PYTHONPATH=/var/app/backend
-ENV PORT=4000
+
 EXPOSE ${PORT}
 
 # CMD uvicorn main:app --host 0.0.0.0 --port ${PORT}
 # CMD granian --interface asgi --host 0.0.0.0 --port ${PORT} main:app
-CMD hypercorn main:app --bind 0.0.0.0:${PORT}
+ENTRYPOINT [ "hypercorn", "main:app", "--bind", "0.0.0.0:${PORT}" ]
 
