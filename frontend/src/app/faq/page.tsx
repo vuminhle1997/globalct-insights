@@ -148,7 +148,7 @@ Luna: "Gerne! Lass mich kurz in der Dokumentation nachsehen, um dir eine fundier
 ];
 
 export const metadata: Metadata = {
-  title: 'global CT InsightChat | FAQ - LLM & RAG Wissensdatenbank',
+  title: 'global CT Insights | FAQ - LLM & RAG Wissensdatenbank',
   description:
     'Häufig gestellte Fragen zu Large Language Models (LLMs), Retrieval-Augmented Generation (RAG) und KI-Technologien. Lernen Sie mehr über Prompts, Parameter und Best Practices.',
   keywords: 'LLM, RAG, KI, maschinelles Lernen, Prompts, Indexierung, FAQ',

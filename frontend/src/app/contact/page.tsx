@@ -3,11 +3,11 @@ import BackHomeButtonIfLoggedOut from '@/components/BackHomeButtonIfLoggedOut';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'global CT InsightChat - Kontakt',
+  title: 'global CT Insights - Kontakt',
   description:
     'Kontaktieren Sie global CT für Fragen zu unseren KI-gestützten Dienstleistungen und Lösungen. Wir sind für Sie da unter +49 (0) 511 5151 07 10 oder info@globalct.com.',
   openGraph: {
-    title: 'global CT InsightChat - Kontakt',
+    title: 'global CT Insights - Kontakt',
     description:
       'Kontaktieren Sie global CT für Fragen zu unseren KI-gestützten Dienstleistungen und Lösungen.',
     type: 'website',

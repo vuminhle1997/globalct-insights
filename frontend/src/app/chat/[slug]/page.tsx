@@ -390,9 +390,9 @@ export default function SlugChatPage({
 
   useEffect(() => {
     if (chat) {
-      window.document.title = `global CT InsightChat - ${chat?.title}`;
+      window.document.title = `global CT Insights - ${chat?.title}`;
     } else {
-      window.document.title = `global CT InsightChat - Lädt Chat . . .`;
+      window.document.title = `global CT Insights - Lädt Chat . . .`;
     }
   }, [chat]);
 

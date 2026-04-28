@@ -113,7 +113,8 @@ export default function ChatSettingsForm({
             {mode === 'create'
               ? 'Erstelle einen neuen Chat mit kontextbezogenen Inhalten. Füllen Sie alle erforderlichen Felder aus, um fortzufahren. Der Titel sollte prägnant sein, die Beschreibung kann zusätzliche Details enthalten, und der Kontext sollte die Rolle und den Kommunikationsstil des Chats definieren.'
               : 'Bearbeite die Einstellungen des bestehenden Chats. Stellen Sie sicher, dass alle Felder korrekt ausgefüllt sind, um die Änderungen zu speichern. Der Titel, die Beschreibung und der Kontext sind entscheidend für die Definition der Chat-Parameter.'}
-            <span className="text-gray-400 mt-4">
+            <br />
+            <span className="text-blue-800 mt-4">
               Markierte Felder mit * sind verpflichtend.
             </span>
           </DialogDescription>
@@ -127,7 +128,7 @@ export default function ChatSettingsForm({
               <div className="flex flex-col items-center gap-4">
                 <div
                   onClick={handleAvatarClick}
-                  className={`w-32 h-32 rounded-full overflow-hidden cursor-pointer relative group ${
+                  className={`w-60 h-60 rounded-full overflow-hidden cursor-pointer relative group ${
                     !avatarPreview
                       ? 'border-2 border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
                       : ''

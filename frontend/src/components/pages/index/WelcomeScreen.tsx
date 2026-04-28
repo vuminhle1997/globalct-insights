@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/tooltip';
 
 /**
- * The `WelcomeScreen` component renders the welcome screen for the Global CT InsightChat application.
+ * The `WelcomeScreen` component renders the welcome screen for the Global CT Insights application.
  * It includes a title, a welcome message, and a button to create a new chat.
  *
  * @component
@@ -61,7 +61,7 @@ export default function WelcomeScreen() {
       )}
       <div className="w-full max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold mb-6 text-center animate-fade-in delay-200">
-          Global CT InsightChat
+          Global CT Insights
         </h1>
         <p className="text-lg text-muted-foreground mb-8 text-center animate-fade-in delay-200">
           Willkommen bei Ihrem KI-Assistenten. Starten Sie einen neuen Chat oder

@@ -16,7 +16,7 @@ import { useEffect } from 'react';
  */
 export default function Home() {
   useEffect(() => {
-    window.document.title = 'global CT InsightChat - Startseite';
+    window.document.title = 'global CT Insights - Startseite';
   }, []);
 
   return (

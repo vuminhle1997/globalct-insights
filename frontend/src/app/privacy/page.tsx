@@ -3,15 +3,15 @@ import BackHomeButtonIfLoggedOut from '@/components/BackHomeButtonIfLoggedOut';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'global CT InsightChat | Datenschutzerklärung',
+  title: 'global CT Insights | Datenschutzerklärung',
   description:
-    'Datenschutzerklärung für global CT InsightChat - Informationen über die Erhebung, Verarbeitung und Speicherung Ihrer personenbezogenen Daten bei der Nutzung unseres RAG-Systems.',
+    'Datenschutzerklärung für global CT Insights - Informationen über die Erhebung, Verarbeitung und Speicherung Ihrer personenbezogenen Daten bei der Nutzung unseres RAG-Systems.',
   keywords:
-    'Datenschutz, Privacy Policy, DSGVO, global CT, InsightChat, Datensicherheit',
+    'Datenschutz, Privacy Policy, DSGVO, global CT, Insights, Datensicherheit',
   openGraph: {
-    title: 'global CT InsightChat | Datenschutzerklärung',
+    title: 'global CT Insights | Datenschutzerklärung',
     description:
-      'Datenschutzerklärung für global CT InsightChat - Informationen über Datenschutz und DSGVO-Konformität.',
+      'Datenschutzerklärung für global CT Insights - Informationen über Datenschutz und DSGVO-Konformität.',
   },
 };
 
