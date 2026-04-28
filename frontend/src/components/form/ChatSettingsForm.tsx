@@ -43,7 +43,7 @@ type FormData = {
 };
 
 export interface ChatSettingsFormProps {
-  handleSubmit: UseFormHandleSubmit<FormData, undefined>;
+  handleSubmit: UseFormHandleSubmit<FormData, FormData>;
   onSubmit: (data: FormData) => Promise<void>;
   register: UseFormRegister<FormData>;
   watch: UseFormWatch<FormData>;

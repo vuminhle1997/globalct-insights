@@ -6,7 +6,7 @@ export type MessageBlock = {
 export type Message = {
   id?: string;
   role: 'user' | 'assistant' | 'system';
-  additional_kwargs?: Record<string, any>;
+  additional_kwargs?: Record<string, unknown>;
   block_type: string;
   text: string;
   created_at: string;

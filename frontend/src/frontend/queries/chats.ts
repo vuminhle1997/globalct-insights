@@ -199,7 +199,7 @@ export const usePostFile = (id: string) => {
 export const useDeleteFile = (chatId: string) => {
   return useMutation({
     mutationFn: async (id: string) => {
-      const response = await axios.delete(
+      const response = await axios.delete<Chat>(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chats/${chatId}/delete/${id}`,
         {
           withCredentials: true,
@@ -346,6 +346,7 @@ export const getChatsByTitle = async (title: string) => {
     }
     return [];
   } catch (error) {
+    console.error('Error fetching chats by title:', error);
     throw new Error('Failed to fetch chats');
   }
 };

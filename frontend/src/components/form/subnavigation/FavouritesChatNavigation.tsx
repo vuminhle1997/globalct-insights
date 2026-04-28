@@ -40,7 +40,7 @@ export interface FavouritesChatNavigationProps {
  */
 export default function FavouritesChatNavigation({
   favouriteChats,
-  useAsTemplate,
+  useAsTemplate: changeTemplate,
 }: FavouritesChatNavigationProps) {
   return (
     <React.Fragment>
@@ -49,7 +49,7 @@ export default function FavouritesChatNavigation({
           <div
             key={existingChat.id}
             className="p-3 border rounded-lg hover:bg-accent cursor-pointer"
-            onClick={() => useAsTemplate(existingChat)}
+            onClick={() => changeTemplate(existingChat)}
           >
             <div className="grid grid-cols-4">
               <div className="col-span-1 content-center">

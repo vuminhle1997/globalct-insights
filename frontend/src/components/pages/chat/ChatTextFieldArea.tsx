@@ -15,7 +15,7 @@ import {
 import { ChatFormData } from '@/frontend/types';
 
 export interface ChatTextFieldAreaProps {
-  handleFormSubmit: UseFormHandleSubmit<ChatFormData, undefined>;
+  handleFormSubmit: UseFormHandleSubmit<ChatFormData, ChatFormData>;
   handleSubmit: (data: ChatFormData) => Promise<void>;
   errors: FieldErrors<ChatFormData>;
   isSubmitting: boolean;
@@ -24,7 +24,7 @@ export interface ChatTextFieldAreaProps {
   setIsFileDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isUploading: boolean;
   uploadFileMutation: UseMutationResult<Chat, Error, FormData, unknown>;
-  deleteFileMutation: UseMutationResult<any, Error, string, unknown>;
+  deleteFileMutation: UseMutationResult<Chat, Error, string, unknown>;
   messageText: string;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleUploadClick: () => void;
