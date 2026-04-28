@@ -1,4 +1,4 @@
-import { Chat } from './';
+import { Chat } from './chats';
 
 export type Favourite = {
   id: string;

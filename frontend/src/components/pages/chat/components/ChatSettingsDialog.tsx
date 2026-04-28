@@ -106,7 +106,7 @@ export default function ChatSettingsDialog({
                       window.location.reload();
                     }, 1500);
                   },
-                  onError: (error: any) => {
+                  onError: (error: Error) => {
                     console.error(
                       'Failed to remove chat from favourites:',
                       error
@@ -128,7 +128,7 @@ export default function ChatSettingsDialog({
                       window.location.reload();
                     }, 1500);
                   },
-                  onError: (error: any) => {
+                  onError: (error: Error) => {
                     console.error('Failed to favourite chat:', error);
                     setFavouriteAlert({
                       show: true,

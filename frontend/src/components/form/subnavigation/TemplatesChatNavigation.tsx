@@ -1,7 +1,6 @@
 'use client';
 
 import { Chat } from '@/frontend/types';
-import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { templates } from '../templates';
 import Image, { StaticImageData } from 'next/image';
@@ -36,7 +35,7 @@ export interface TemplatesChatNavigationProps {
  * <TemplatesChatNavigation useAsTemplate={handleTemplateSelection} />
  */
 export default function TemplatesChatNavigation({
-  useAsTemplate,
+  useAsTemplate: changeAsTemplate,
 }: TemplatesChatNavigationProps) {
   return (
     <div className="space-y-2">
@@ -44,7 +43,7 @@ export default function TemplatesChatNavigation({
         <div
           key={uuidv4()}
           className="p-3 border rounded-lg hover:bg-accent cursor-pointer bg-muted/50"
-          onClick={() => useAsTemplate(template)}
+          onClick={() => changeAsTemplate(template)}
         >
           <div className="flex items-center gap-3">
             {template.avatar_path && (

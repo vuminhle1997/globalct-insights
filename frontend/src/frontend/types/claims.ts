@@ -20,7 +20,7 @@ export type Group = {
   displayName: string | null;
   description: string | null;
   uniqueName: string | null;
-  [key: string]: any | null;
+  [key: string]: unknown | null;
 };
 
 export type Groups = {

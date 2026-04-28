@@ -49,7 +49,8 @@ export default function ChatsNavigation() {
     useInfiniteQuery({
       queryKey: ['chats'],
       queryFn: ({ pageParam = 1 }) => getChats(10, pageParam),
-      getNextPageParam: (lastPage, pages) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      getNextPageParam: (lastPage, _) => {
         if (lastPage.page >= lastPage.pages) return undefined;
         return lastPage.page + 1;
       },

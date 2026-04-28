@@ -32,11 +32,12 @@ export interface UsersChatNavigationProps {
  */
 export default function UsersChatNavigation({
   existingChats,
-  useAsTemplate,
+  useAsTemplate: changeAsTemplate,
 }: UsersChatNavigationProps) {
   const {
     register,
     watch,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
@@ -67,7 +68,7 @@ export default function UsersChatNavigation({
             <div
               key={existingChat.id}
               className="p-3 border rounded-lg hover:bg-accent cursor-pointer"
-              onClick={() => useAsTemplate(existingChat)}
+              onClick={() => changeAsTemplate(existingChat)}
             >
               <div className="grid grid-cols-4">
                 <div className="col-span-1 content-center">

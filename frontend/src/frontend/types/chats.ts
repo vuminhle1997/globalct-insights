@@ -5,10 +5,9 @@ import { Message } from './message';
 export type LLMMessage = {
   id?: string;
   response: string;
-  sources: any[];
-  source_nodes: any[];
-  is_dummy_stream: boolean;
-  metadata: any;
+  sources: Record<string, unknown>[]; // TODO: check if this is correct
+  source_nodes: Record<string, unknown>[]; // TODO: check if this is correct
+  metadata: Record<string, unknown>; // TODO: check if this is correct
 };
 
 export type LLMAgentResponse = {
@@ -22,7 +21,7 @@ export type Chat = {
   context: string;
   temperature: number;
   model: string;
-  model_provider: 'GOOGLE_GENAI' | 'OPENAI' | 'AZURE_OPENAI' | 'HUGGINGFACE' | 'CUSTOM' | 'IONOS' | 'OLLAMA';
+  model_provider: 'GOOGLE_GENAI' | 'OPENAI' | 'CUSTOM' | 'IONOS' | 'OLLAMA';
   created_at: string;
   updated_at: string;
   last_interacted_at: string;

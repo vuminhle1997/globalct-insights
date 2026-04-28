@@ -52,6 +52,7 @@ export const useAuth = () => {
         dispatch(setIsAuthorized(true));
         return response.data;
       } catch (error) {
+        console.error('Error fetching authentication data:', error);
         dispatch(setIsAuthorized(false));
         throw new Error('Unauthorized');
       }
