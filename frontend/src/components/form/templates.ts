@@ -1,10 +1,10 @@
 'use client';
 
-import hrImage from '@/static/templates/hr.jpeg';
-import engineerImage from '@/static/templates/engineer.webp';
-import softwareEngineerImage from '@/static/templates/software_engineer.webp';
+import hrImage from '@/static/templates/hr.png';
+import engineerImage from '@/static/templates/engineer.png';
+import softwareEngineerImage from '@/static/templates/software_engineer.png';
 import aiImage from '@/static/templates/helper.webp';
-import extractionImage from '@/static/templates/extraction.png';
+import extractionImage from '@/static/templates/consultant.png';
 
 const modellingText = `
 Your name is Anna Pham.
