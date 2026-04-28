@@ -2,14 +2,11 @@ version: '3.8'
 
 services:
   phoenix:
-    image: arizephoenix/phoenix:latest
+    image: arizephoenix/phoenix:14.15.0
     container_name: gct-insight-chat-phoenix
     restart: always
-    # env_file:
-    #   - .env
-    # environment:
-    #   PHOENIX_ENABLE_AUTH: ${PHOENIX_ENABLE_AUTH}
-    #   PHOENIX_SECRET: ${PHOENIX_SECRET}
+    env_file:
+      - .env
     ports:
       - '6006:6006' # UI and OTLP HTTP collector
       - '4317:4317' # OTLP gRPC collector
@@ -17,17 +14,17 @@ services:
       - phoenix_data:/mnt/data
     networks:
       - gct-apps
-  ollama:
-    image: ollama/ollama:latest
-    container_name: gct-insight-chat-ollama
-    restart: always
-    ports:
-      - '11434:11434'
-    volumes:
-      - ollama_data:/root/.ollama
-      # - /home/kiwerkstatt/.ollama:/root/.ollama
-    networks:
-      - gct-apps
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: gct-insight-chat-ollama
+  #   restart: always
+  #   ports:
+  #     - '11434:11434'
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #     # - /home/kiwerkstatt/.ollama:/root/.ollama
+  #   networks:
+  #     - gct-apps
   redis:
     image: redis:8.6.2-alpine
     container_name: gct-insight-chat-redis
@@ -119,7 +116,6 @@ services:
       - mysql
       - postgres
       - chromadb
-      - ollama
     networks:
       - gct-apps
   phpmyadmin:
@@ -166,11 +162,7 @@ volumes:
     driver: local
   backend_data:
     driver: local
-  ollama_data:
-    driver: local
   phoenix_data:
-    driver: local
-  llmsherpa_data:
     driver: local
 
 networks:
