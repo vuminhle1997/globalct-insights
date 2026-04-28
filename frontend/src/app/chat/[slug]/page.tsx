@@ -27,7 +27,7 @@ import ChatEntryForm from '@/components/form/ChatEntryForm';
 import PendingMessageLoader from '@/components/form/PendingMessageLoader';
 import ChatNotFoundScreen, {
   UserChatNotFoundScreen,
-} from '@/components/pages/chat/chat_404';
+} from '@/components/pages/chat/404NotFound';
 import ChatAlertDialog from '@/components/pages/chat/components/ChatAlertDialog';
 import ChatContainer, {
   ChatContainerProps,
