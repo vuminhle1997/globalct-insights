@@ -3,7 +3,7 @@ import BackHomeButtonIfLoggedOut from '@/components/BackHomeButtonIfLoggedOut';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'global CT InsightChat - Nutzungsbedingungen',
+  title: 'global CT Insights - Nutzungsbedingungen',
   description:
     'Nutzungsbedingungen für die KI-gestützte Dokumentenanalyse-Plattform von global CT. Informationen zu Nutzungsvoraussetzungen, Pflichten, Datenschutz und rechtlichen Bestimmungen.',
   keywords:
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'global CT' }],
   robots: 'index, follow',
   openGraph: {
-    title: 'global CT InsightChat - Nutzungsbedingungen',
+    title: 'global CT Insights - Nutzungsbedingungen',
     description:
       'Nutzungsbedingungen für die KI-gestützte Dokumentenanalyse-Plattform von global CT.',
     type: 'website',

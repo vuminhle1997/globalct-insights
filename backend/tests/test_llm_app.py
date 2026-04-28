@@ -59,6 +59,7 @@ except Exception as e:
 #     )
 #     assert_test(test_case, [answer_relevancy_metric])
 
+
 def test_llama_rag():
     from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 
@@ -84,9 +85,7 @@ def test_llama_rag():
     ]
 
     test_case = LLMTestCase(
-        input=user_input,
-        actual_output=response_object.response,
-        retrieval_context=[""]
+        input=user_input, actual_output=response_object.response, retrieval_context=[""]
     )
 
     assert_test(test_case, metrics)

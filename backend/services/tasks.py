@@ -1,20 +1,29 @@
-from dependencies import engine
-from sqlmodel import Session
-from models import Chat, ChatFile
-
-from utils import (
-    load_dump_to_database, 
-    list_all_tables_from_db, 
-    pg_user, pg_port, pg_host, 
-    pg_password
-)
-from services import index_sql_dump
 from chromadb import Collection
-from dependencies import logger, SessionDep
+from sqlmodel import Session
 
-def process_dump_to_persist(db_client: SessionDep, chat_id: str, chat_file_id: str,
-                            sql_dump_path: str, database_type: str, db_name: str, 
-                            chroma_collection: Collection):
+from backend.dependencies import SessionDep, engine, logger
+from backend.models.chat import Chat
+from backend.models.chat_file import ChatFile
+from backend.services.indexer import index_sql_dump
+from backend.utils.upload_sql_dump import (
+    list_all_tables_from_db,
+    load_dump_to_database,
+    pg_host,
+    pg_password,
+    pg_port,
+    pg_user,
+)
+
+
+def process_dump_to_persist(
+    db_client: SessionDep,
+    chat_id: str,
+    chat_file_id: str,
+    sql_dump_path: str,
+    database_type: str,
+    db_name: str,
+    chroma_collection: Collection,
+):
     """
     Processes a SQL dump file, loads it into a database, indexes its contents, and updates the database records.
 
@@ -84,5 +93,8 @@ def process_dump_to_persist(db_client: SessionDep, chat_id: str, chat_file_id: s
             logger.info(f"Indexed SQL dump for ChatFile {db_file.id} (DB: {db_file.database_name})")
         except Exception as e:
             db_session.rollback()
-            logger.error(f"Failed processing SQL dump for Chat: {chat_id}, File: {chat_file_id}. Error: {e}", exc_info=True)
+            logger.error(
+                f"Failed processing SQL dump for Chat: {chat_id}, File: {chat_file_id}. Error: {e}",
+                exc_info=True,
+            )
             return

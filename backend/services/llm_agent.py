@@ -1,11 +1,9 @@
 from llama_index.core.agent.workflow import ReActAgent
-from typing import List
-from llama_index.core.tools import BaseTool
 from llama_index.core.llms import LLM
+from llama_index.core.tools import BaseTool
 
-def create_agent(system_prompt: str, tools: List[BaseTool],
-                 llm: LLM,
-                 **kwargs) -> ReActAgent:
+
+def create_agent(system_prompt: str, tools: list[BaseTool], llm: LLM, **kwargs) -> ReActAgent:
     """
     Creates and configures a ReActAgent with specified parameters.
 

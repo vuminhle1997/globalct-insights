@@ -1,29 +1,20 @@
 name: Build and Push FastAPI & Next.js to GHCR
 
 on:
-  # Trigger on tags AND when the test workflow succeeds
-  workflow_run:
-    workflows: ["Test Build Docker Images on Dev"]
-    branches: [dev]
-    types:
-      - completed
-  # Also allow manual triggers and tag pushes (but will check test status)
-  workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
-      - 'v*'
+      - "v*"
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_BASENAME: ${{ github.repository }}
+  FRONTEND_BACKEND_URL: https://api.insights.globalct.com
 
 jobs:
-  check-tests-and-build:
-    # Only proceed if the test workflow succeeded OR this is a tag push
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+  publish-images:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,15 +23,33 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        # For tag pushes, check out the exact tagged commit
-        with:
-          ref: ${{ github.ref }}
 
-      - name: Verify tests passed (for non-tag triggers)
-        if: github.event_name == 'workflow_run'
+      - name: Resolve image tags
+        id: meta
+        shell: bash
         run: |
-          echo "Test workflow ${{ github.event.workflow_run.id }} succeeded"
-          
+          short_sha="${GITHUB_SHA::7}"
+          backend_tags="${REGISTRY}/${IMAGE_BASENAME}/fastapi:${short_sha}"
+          frontend_tags="${REGISTRY}/${IMAGE_BASENAME}/nextjs:${short_sha}"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            backend_tags+=$'\n'"${REGISTRY}/${IMAGE_BASENAME}/fastapi:${GITHUB_REF_NAME}"
+            frontend_tags+=$'\n'"${REGISTRY}/${IMAGE_BASENAME}/nextjs:${GITHUB_REF_NAME}"
+            app_version="${GITHUB_REF_NAME}"
+          else
+            app_version="${short_sha}"
+          fi
+
+          {
+            echo "backend_tags<<EOF"
+            echo "${backend_tags}"
+            echo "EOF"
+            echo "frontend_tags<<EOF"
+            echo "${frontend_tags}"
+            echo "EOF"
+            echo "app_version=${app_version}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -48,38 +57,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ... rest of your existing build/push steps ...
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Extract Docker metadata for FastAPI
-        id: meta-fastapi
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASENAME }}/fastapi
-          tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=true
 
       - name: Build and push FastAPI Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
           file: ./backend/Dockerfile
           push: true
-          tags: ${{ steps.meta-fastapi.outputs.tags }}
-          labels: ${{ steps.meta-fastapi.outputs.labels }}
+          tags: ${{ steps.meta.outputs.backend_tags }}
+          build-args: |
+            PORT=4000
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Extract Docker metadata for Next.js
-        id: meta-nextjs
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASENAME }}/nextjs
-          tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable=true
 
       - name: Build and push Next.js Docker image
         uses: docker/build-push-action@v5
@@ -87,7 +78,9 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ${{ steps.meta-nextjs.outputs.tags }}
-          labels: ${{ steps.meta-nextjs.outputs.labels }}
+          tags: ${{ steps.meta.outputs.frontend_tags }}
+          build-args: |
+            NEXT_PUBLIC_BACKEND_URL=${{ env.FRONTEND_BACKEND_URL }}
+            NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.app_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

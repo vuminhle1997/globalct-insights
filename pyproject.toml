@@ -1,0 +1,88 @@
+[project]
+name = "globalct-insights"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Vu Minh Le",email = "vuminhle@outlook.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "fastapi[all] (>=0.136.1,<0.137.0)",
+    "python-multipart (>=0.0.26,<0.0.27)",
+    "msal (>=1.36.0,<2.0.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)",
+    "fastapi-pagination (>=0.15.12,<0.16.0)",
+    "hypercorn (>=0.18.0,<0.19.0)",
+    "sqlmodel (>=0.0.38,<0.0.39)",
+    "alembic (>=1.18.4,<2.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)",
+    "sqlalchemy (>=2.0.49,<3.0.0)",
+    "llama-index (>=0.14.21,<0.15.0)",
+    "llama-cloud-services (>=0.6.94,<0.7.0)",
+    "llama-index-llms-ollama (>=0.10.1,<0.11.0)",
+    "llama-index-embeddings-ollama (>=0.9.0,<0.10.0)",
+    "llama-index-llms-openai-like (>=0.7.2,<0.8.0)",
+    "llama-index-embeddings-openai-like (>=0.3.1,<0.4.0)",
+    "llama-index-llms-openai (>=0.7.5,<0.8.0)",
+    "llama-index-embeddings-openai (>=0.6.0,<0.7.0)",
+    "llama-index-vector-stores-chroma (>=0.5.5,<0.6.0)",
+    "llama-index-tools-duckduckgo (>=0.5.0,<0.6.0)",
+    "llama-index-readers-web (>=0.6.0,<0.7.0)",
+    "mysql-connector-python (==9.4.0)",
+    "chromadb (>=1.5.8,<2.0.0)",
+    "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "markitdown (>=0.1.5,<0.2.0)",
+    "pytest (>=9.0.3,<10.0.0)",
+    "arize-phoenix-otel (>=0.15.0,<0.16.0)",
+    "openinference-instrumentation-llama-index (>=4.3.9,<5.0.0)",
+    "opentelemetry-instrumentation-fastapi (>=0.62b0,<0.63)",
+    "numpy (>=2.4.4,<3.0.0)",
+    "deepeval (>=3.9.7,<4.0.0)",
+    "pandas (>=3.0.2,<4.0.0)",
+    "polars (>=1.40.1,<2.0.0)",
+    "redis (>=7.4.0,<8.0.0)",
+    "llama-index-llms-google-genai (>=0.9.1,<0.10.0)",
+    "llama-index-embeddings-google-genai (>=0.5.0,<0.6.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.15.12"
+
+[tool.ruff]
+# Global Settings
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+# Select Rules:
+# E/W = pycodestyle, F = Pyflakes, I = isort (imports)
+# UP = pyupgrade, B = flake8-bugbear
+select = ["E", "F", "I", "UP", "B"]
+# Explicitly enable E501 if you want "Line too long" to show as a linter error
+extend-select = ["E501"]
+
+[tool.ruff.lint.isort]
+# Ensure imports are sorted correctly before they are checked for usage
+combine-as-imports = true
+
+[tool.ruff.format]
+# Core Formatting (replaces Black)
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+# Automatically format code snippets in your docstrings
+docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+# Special handling for __init__.py files
+# Often we WANT "unused" imports here for re-exporting.
+# This prevents Ruff from deleting them automatically.
+"__init__.py" = ["F401"]
+

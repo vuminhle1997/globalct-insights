@@ -44,6 +44,7 @@ type FormData = {
   avatar?: FileList;
   temperature: number;
   model: string;
+  model_provider: string;
 };
 
 interface ChatEntryFormProps {
@@ -118,10 +119,12 @@ export default function ChatEntryForm({
           context: chat.context,
           avatar: undefined,
           temperature: chat.temperature,
-          model: chat.model || 'llama3.3:70b',
+          model: chat.model || 'gemini-3.1-flash-lite-preview',
+          model_provider: chat.model_provider || 'GOOGLE_GENAI',
         }
       : {
-          model: 'llama3.3:70b',
+          model: 'gemini-3.1-flash-lite-preview',
+          model_provider: 'GOOGLE_GENAI',
         },
   });
   const [showError, setShowError] = useState(false);
@@ -154,7 +157,7 @@ export default function ChatEntryForm({
     setValue('description', templateChat.description || '');
     setValue('context', templateChat.context || '');
     setValue('temperature', templateChat.temperature || 0.75);
-    setValue('model', templateChat.model || 'llama3.3:70b');
+    setValue('model', templateChat.model || 'gemini-3.1-flash-lite-preview');
 
     // Handle avatar based on template type
     if ('id' in templateChat) {

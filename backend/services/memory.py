@@ -1,31 +1,34 @@
-from typing import List, Optional, Sequence, Any
+from collections.abc import Sequence
+from typing import Any
+
+from llama_index.core.llms import LLM, ChatMessage as LLMChatMessage
 from llama_index.core.memory import (
+    FactExtractionMemoryBlock,
     Memory,
     StaticMemoryBlock,
-    FactExtractionMemoryBlock,
     VectorMemoryBlock,
 )
 from llama_index.core.settings import Settings
-from llama_index.core.llms import ChatMessage as LLMChatMessage
-from llama_index.core.llms import LLM
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 DEFAULT_MAX_TOKEN_LIMIT = 128_000  # Aligns with planned usage of 128K-context OSS / frontier models.
 
+
 def create_memory(
     chat_id: str,
-    llm: LLM,
-    messages: Optional[Sequence[LLMChatMessage]] = None,
-    vector_store: Optional[ChromaVectorStore] = None,
+    llm: LLM | None,
+    messages: Sequence[LLMChatMessage] | None = None,
+    vector_store: ChromaVectorStore | None = None,
     *,
     token_limit: int = DEFAULT_MAX_TOKEN_LIMIT,
     chat_history_token_ratio: float = 0.3,
-    token_flush_size: Optional[int] = None,
+    token_flush_size: int | None = None,
     max_facts: int = 25,
     similarity_top_k: int = 5,
     retrieval_context_window: int = 6,
     system_prompt: str = (
-        "You are a smart AI assistant. Follow system instructions and user-provided rules faithfully."),
+        "You are a smart AI assistant. Follow system instructions and user-provided rules faithfully."
+    ),
 ) -> Memory:
     """Create and initialize conversational memory for an agent.
 
@@ -36,8 +39,9 @@ def create_memory(
     ----------
     chat_id : str
         Unique session identifier (also used as memory session_id).
-    llm : LLM
+    llm : LLM | None
         The language model used for fact extraction and downstream reasoning.
+        If None, falls back to ``Settings.llm``.
     messages : Sequence[LLMChatMessage], optional
         Historical messages to seed the memory. If None or empty, seeding is skipped.
     vector_store : ChromaVectorStore, optional
@@ -74,11 +78,16 @@ def create_memory(
     if token_limit <= 0:
         raise ValueError("token_limit must be positive")
 
+    if llm is None:
+        llm = Settings.llm
+    if llm is None:
+        raise RuntimeError("No LLM configured for memory creation. Pass an llm explicitly or set Settings.llm.")
+
     # Derive default flush size adaptively if not provided.
     if token_flush_size is None:
         token_flush_size = max(1024, int(token_limit * 0.01))
 
-    blocks: List[Any] = []
+    blocks: list[Any] = []
 
     # Static/system prompt block (priority 0 => always retained first)
     blocks.append(
@@ -103,7 +112,8 @@ def create_memory(
     if vector_store is not None:
         if Settings.embed_model is None:
             raise RuntimeError(
-                "Settings.embed_model is None; an embedding model must be configured before enabling vector memory.")
+                "Settings.embed_model is None; an embedding model must be configured before enabling vector memory."
+            )
         blocks.append(
             VectorMemoryBlock(
                 name="vector_memory",

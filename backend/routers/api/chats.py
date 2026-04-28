@@ -1,60 +1,55 @@
 import asyncio
 import json
-import uuid
 import os
 import time
+import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime
-from routers.custom_router import APIRouter
-from fastapi import Depends, HTTPException, UploadFile, File, Form, Response
-from llama_index.core import PromptTemplate
-from llama_index.core.agent.workflow import ReActAgent
-from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.llms.ollama import Ollama
-from llama_index.core.llms import MessageRole, ChatMessage as LLMChatMessage
-from llama_index.vector_stores.chroma import ChromaVectorStore
-from llama_index.core.tools import BaseTool
-from redis import Redis
-from typing import List
+from pathlib import Path
 
 from chromadb import Collection
-from typing import Optional, AsyncGenerator
-from starlette.requests import Request
-from dependencies import (
-    get_redis_client, 
-    get_chroma_vector, 
-    get_chroma_collection, 
-    logger, 
-    base_url,
-    SessionDep
-)
-
-from models import ChatMessage
-from models.chat import Chat, ChatQuery
-from models.chat_file import ChatFile
-from pathlib import Path
+from fastapi import BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate as sqlalchemy_pagination
-
-from utils import decode_jwt, check_property_belongs_to_user
-from services import (
-    index_uploaded_file,
-    deletes_file_index_from_collection,
-    create_agent,
-    process_dump_to_persist,
-    create_pandas_engines_tools_from_files,
-    create_sql_engines_tools_from_files,
-    create_search_engine_tool,
-    create_url_loader_tool,
-    create_query_engine_tools,
-    index_spreadsheet,
-    create_text_extraction_tool_from_file,
-    create_memory
-)
-from fastapi import BackgroundTasks
-from utils import detect_sql_dump_type, delete_database_from_postgres
-
-from fastapi.responses import StreamingResponse
+from llama_index.core import PromptTemplate
+from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.chat_engine.types import AgentChatResponse
+from llama_index.core.llms import ChatMessage as LLMChatMessage, MessageRole
+from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.settings import Settings
+from llama_index.core.tools import BaseTool
+from llama_index.llms.ollama import Ollama
+from llama_index.vector_stores.chroma import ChromaVectorStore
+from redis import Redis
+from starlette.requests import Request
+
+from backend.dependencies import (
+    SessionDep,
+    base_url,
+    get_chroma_collection,
+    get_chroma_vector,
+    get_redis_client,
+    logger,
+)
+from backend.models.chat import Chat, ChatPublic, ChatQuery
+from backend.models.chat_file import ChatFile
+from backend.models.chat_message import ChatMessage
+from backend.routers.custom_router import APIRouter
+from backend.services.indexer import deletes_file_index_from_collection, index_spreadsheet, index_uploaded_file
+from backend.services.llm_agent import create_agent
+from backend.services.memory import create_memory
+from backend.services.tasks import process_dump_to_persist
+from backend.services.tools_initializer import (
+    create_pandas_engines_tools_from_files,
+    create_query_engine_tools,
+    create_search_engine_tool,
+    create_sql_engines_tools_from_files,
+    create_url_loader_tool,
+)
+from backend.utils.check_property import check_property_belongs_to_user
+from backend.utils import verify_session_and_get_user_id
+from backend.utils.upload_sql_dump import delete_database_from_postgres, detect_sql_dump_type
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -64,6 +59,66 @@ router = APIRouter(
     tags=["chats"],
     responses={404: {"description": "Not found"}},
 )
+
+
+def serialize_chat_file(chat_file: ChatFile) -> dict:
+    return {
+        "id": chat_file.id,
+        "file_name": chat_file.file_name,
+        "path_name": chat_file.path_name,
+        "mime_type": chat_file.mime_type,
+        "indexed": chat_file.indexed,
+        "chat_id": chat_file.chat_id,
+        "database_name": chat_file.database_name,
+        "database_type": chat_file.database_type,
+        "tables": chat_file.tables,
+        "created_at": chat_file.created_at,
+        "updated_at": chat_file.updated_at,
+    }
+
+
+def serialize_chat_message(chat_message: ChatMessage) -> dict:
+    return {
+        "id": chat_message.id,
+        "role": chat_message.role,
+        "additional_kwargs": chat_message.additional_kwargs,
+        "block_type": chat_message.block_type,
+        "text": chat_message.text,
+        "created_at": chat_message.created_at,
+        "chat_id": chat_message.chat_id,
+    }
+
+
+def serialize_favourite(favourite) -> dict | None:
+    if favourite is None:
+        return None
+
+    return {
+        "id": favourite.id,
+        "created_at": favourite.created_at,
+        "chat_id": favourite.chat_id,
+        "user_id": favourite.user_id,
+    }
+
+
+def serialize_chat(chat: Chat, *, include_files: bool = False) -> dict:
+    serialized_chat = {
+        "id": chat.id,
+        "title": chat.title,
+        "description": chat.description,
+        "context": chat.context,
+        "created_at": chat.created_at,
+        "updated_at": chat.updated_at,
+        "last_interacted_at": chat.last_interacted_at,
+        "user_id": chat.user_id,
+        "avatar_path": chat.avatar_path,
+        "temperature": chat.temperature,
+        "model": chat.model,
+    }
+    if include_files:
+        serialized_chat["files"] = [serialize_chat_file(chat_file) for chat_file in chat.files]
+    return serialized_chat
+
 
 def initialize_ionos_llm(temperature: float):
     """
@@ -75,14 +130,14 @@ def initialize_ionos_llm(temperature: float):
     Parameters:
     -----------
     temperature : float
-        The temperature parameter for the LLM, controlling the randomness of the output. 
+        The temperature parameter for the LLM, controlling the randomness of the output.
         Higher values (e.g., 1.0) yield more diverse output, while lower values (e.g., 0.2) make it more deterministic.
 
     Returns:
     --------
     OpenAILike
         An instance of the `OpenAILike` LLM from LlamaIndex, configured to use the IONOS endpoint with provided settings.
-    
+
     Environment Variables:
     ----------------------
     - IONOS_BASE_URL : str
@@ -96,9 +151,10 @@ def initialize_ionos_llm(temperature: float):
     - The `OPENAI_API_BASE` and `OPENAI_API_KEY` are set globally in the environment to ensure
       compatibility with tools expecting OpenAI-like APIs.
     """
-    from llama_index.llms.openai_like import OpenAILike
-    from dotenv import load_dotenv
     import os
+
+    from dotenv import load_dotenv
+    from llama_index.llms.openai_like import OpenAILike
 
     load_dotenv()  # Load environment variables from .env file
 
@@ -111,15 +167,15 @@ def initialize_ionos_llm(temperature: float):
     os.environ["OPENAI_API_KEY"] = api_key
 
     headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
     }
 
     # Instantiate the OpenAILike LLM with specified parameters
     llm = OpenAILike(
         api_base=base_url,
         temperature=temperature,
-        model='meta-llama/Llama-3.3-70B-Instruct',
+        model="meta-llama/Llama-3.3-70B-Instruct",
         is_chat_model=True,
         default_headers=headers,
         api_key=api_key,
@@ -128,13 +184,14 @@ def initialize_ionos_llm(temperature: float):
 
     return llm
 
+
 async def stream_agent_response(
     agent: ReActAgent,
     user_input: str,
     db_client: SessionDep,
     chat_id: str,
     user_message: ChatMessage,
-    chat_memory: ChatMemoryBuffer
+    chat_memory: ChatMemoryBuffer,
 ) -> AsyncGenerator[str, None]:
     """
     Asynchronously streams the response from a ReActAgent as Server-Sent Events (SSE) while saving the conversation to the database.
@@ -159,12 +216,13 @@ async def stream_agent_response(
         - Logs errors and warnings related to streaming and database operations.
     """
     full_response_text = ""
+    async_generator = None
     try:
         async_generator = agent.run(user_msg=user_input, memory=chat_memory)
 
         async for chunk in async_generator.stream_events():
             delta = None
-            if hasattr(chunk, 'delta') and chunk.delta:
+            if hasattr(chunk, "delta") and chunk.delta:
                 delta = chunk.delta
             elif isinstance(chunk, str):  # Handle simpler cases if agent streams raw strings
                 delta = chunk
@@ -174,6 +232,22 @@ async def stream_agent_response(
                 # Format as Server-Sent Event (SSE)
                 yield f"data: {json.dumps({'value': delta})}\n\n"
                 await asyncio.sleep(0.1)
+
+        # Some agent implementations may complete without delta events.
+        if not full_response_text and async_generator is not None:
+            try:
+                final_response = await async_generator
+                final_text = None
+                if isinstance(final_response, str):
+                    final_text = final_response
+                elif hasattr(final_response, "response") and final_response.response:
+                    final_text = final_response.response
+
+                if final_text:
+                    full_response_text = str(final_text)
+                    yield f"data: {json.dumps({'value': full_response_text})}\n\n"
+            except Exception as final_err:
+                logger.warning(f"Could not resolve final agent response for chat {chat_id}: {final_err}")
 
         # Signal the end of the stream
         yield f"data: {json.dumps({'status': 'done'})}\n\n"
@@ -189,7 +263,7 @@ async def stream_agent_response(
                 id=str(uuid.uuid4()),
                 role=MessageRole.ASSISTANT,
                 text=full_response_text.strip(),
-                block_type='text',
+                block_type="text",
                 additional_kwargs={},
                 chat_id=chat_id,
                 created_at=datetime.now(),
@@ -212,20 +286,25 @@ async def stream_agent_response(
                     logger.error(f"Chat {chat_id} not found when trying to save assistant message.")
 
             except Exception as db_error:
-                logger.error(f"Failed to save assistant message for chat {chat_id}: {db_error}", exc_info=True)
+                logger.error(
+                    f"Failed to save assistant message for chat {chat_id}: {db_error}",
+                    exc_info=True,
+                )
                 db_client.rollback()
         else:
             logger.warning(f"No response generated for chat {chat_id}, not saving assistant message.")
 
 
-@router.get("/", response_model=Page[Chat])
-async def get_all_chats(db_client: SessionDep = SessionDep,
-                        request: Request = Request,
-                        redis_client: Redis = Depends(get_redis_client)):
+@router.get("/", response_model=Page[ChatPublic])
+async def get_all_chats(
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+):
     """
     Retrieve all chats for the authenticated user.
 
-    This endpoint fetches all chats associated with the authenticated user, 
+    This endpoint fetches all chats associated with the authenticated user,
     ordered by the last interaction timestamp in descending order.
 
     - **db_client**: Database session dependency.
@@ -239,22 +318,19 @@ async def get_all_chats(db_client: SessionDep = SessionDep,
     - 404: If the session ID is not found in cookies or the user is not authenticated.
     """
     query = db_client.query(Chat)
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error(f"Session id not found in cookies")
-        raise HTTPException(status_code=404, detail="Not found")
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
     query = query.filter(Chat.user_id == user_id).order_by(Chat.last_interacted_at.desc())
     page = sqlalchemy_pagination(query)
     return page
 
 
 @router.get("/search")
-async def get_chats_by_title(title: str, db_client: SessionDep = SessionDep,
-                             request: Request = Request,
-                             redis_client: Redis = Depends(get_redis_client)):
+async def get_chats_by_title(
+    title: str,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+):
     """
     Search chats by title for the authenticated user.
 
@@ -271,23 +347,19 @@ async def get_chats_by_title(title: str, db_client: SessionDep = SessionDep,
     **Raises**:
     - 404: If the session ID is not found in cookies or the user is not authenticated.
     """
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error(f"Session id not found in cookies")
-        raise HTTPException(status_code=404, detail="Not found")
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
-    chats = (db_client
-             .query(Chat).filter(Chat.title.like(f"%{title}%")).filter(Chat.user_id == user_id).all())
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
+    chats = db_client.query(Chat).filter(Chat.title.like(f"%{title}%")).filter(Chat.user_id == user_id).all()
 
     return chats
 
 
 @router.get("/{chat_id}")
-async def get_chat(chat_id: str, db_client: SessionDep = SessionDep,
-                   request: Request = Request,
-                   redis_client: Redis = Depends(get_redis_client)):
+async def get_chat(
+    chat_id: str,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+):
     """
     Retrieve a specific chat by its ID.
 
@@ -310,9 +382,12 @@ async def get_chat(chat_id: str, db_client: SessionDep = SessionDep,
         raise HTTPException(status_code=404, detail="Chat not found")
 
     belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
-    messages = (db_client.query(ChatMessage)
-                .filter(ChatMessage.chat_id == chat_id)
-                .order_by(ChatMessage.created_at.desc()).all())[:10]
+    messages = (
+        db_client.query(ChatMessage)
+        .filter(ChatMessage.chat_id == chat_id)
+        .order_by(ChatMessage.created_at.desc())
+        .all()
+    )[:10]
 
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
@@ -322,19 +397,21 @@ async def get_chat(chat_id: str, db_client: SessionDep = SessionDep,
     favorite = db_chat.favourite if db_chat.favourite else None
 
     return {
-        **db_chat.model_dump(),
-        'files': db_chat.files,
-        'messages': messages,
-        'favourite': favorite.model_dump() if favorite else None
+        **serialize_chat(db_chat, include_files=True),
+        "messages": [serialize_chat_message(message) for message in messages],
+        "favourite": serialize_favourite(favorite),
     }
 
 
 @router.post("/{chat_id}/chat/stream")
-async def chat_stream(chat_id: str, chat: ChatQuery,
-                      db_client: SessionDep = SessionDep,
-                      request: Request = Request,
-                      redis_client: Redis = Depends(get_redis_client),
-                      chroma_vector_store: ChromaVectorStore = Depends(get_chroma_vector)):
+async def chat_stream(
+    chat_id: str,
+    chat: ChatQuery,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    chroma_vector_store: ChromaVectorStore = Depends(get_chroma_vector),
+):
     """
     Handles the chat streaming endpoint for a specific chat session.
 
@@ -377,15 +454,18 @@ async def chat_stream(chat_id: str, chat: ChatQuery,
         id=str(uuid.uuid4()),
         role=MessageRole.USER,
         text=chat.text,
-        block_type='text',
+        block_type="text",
         additional_kwargs={},
         chat_id=chat_id,
         created_at=datetime.now(),
     )
 
-    old_messages = (db_client.query(ChatMessage)
-                    .filter(ChatMessage.chat_id == chat_id)
-                    .order_by(ChatMessage.created_at.desc()).all())[:25]
+    old_messages = (
+        db_client.query(ChatMessage)
+        .filter(ChatMessage.chat_id == chat_id)
+        .order_by(ChatMessage.created_at.desc())
+        .all()
+    )[:25]
 
     chat_history = [
         LLMChatMessage(
@@ -396,42 +476,69 @@ async def chat_stream(chat_id: str, chat: ChatQuery,
         for message in old_messages
     ]
 
-    tools: List[BaseTool] = []
+    tools: list[BaseTool] = []
     files = db_chat.files
 
     if db_chat.model:
         model_from_chat = db_chat.model
     else:
         model_from_chat = "llama3.3:70b"
-        
-    provider = os.getenv('LLM_PROVIDER', 'OLLAMA')
+
+    provider = (db_chat.model_provider or "GOOGLE_GENAI").upper()
     llm = None
-    
-    if provider == 'OLLAMA':
-        llm = Ollama(model=model_from_chat, temperature=db_chat.temperature, request_timeout=500, base_url=base_url)
-    elif provider == 'IONOS':
+
+    if provider == "OLLAMA":
+        llm = Ollama(
+            model=model_from_chat,
+            temperature=db_chat.temperature,
+            request_timeout=500,
+            base_url=base_url,
+        )
+    elif provider == "IONOS":
         llm = initialize_ionos_llm(temperature=db_chat.temperature)
+    elif provider == "GOOGLE_GENAI":
+        from llama_index.llms.google_genai import GoogleGenAI
+
+        llm = GoogleGenAI(model=model_from_chat, temperature=db_chat.temperature)
+
+    # Fall back to globally configured LLM (e.g. GOOGLE provider from app startup).
+    if llm is None:
+        llm = Settings.llm
+
+    if llm is None:
+        logger.error("No LLM configured for chat stream (provider=%s)", provider)
+        raise HTTPException(status_code=500, detail="No LLM configured. Check server model settings.")
 
     # new implementation of agent memory
-    chat_memory = create_memory(chat_id=chat_id, llm=llm, messages=chat_history,
-                                vector_store=chroma_vector_store, token_limit=128_000, system_prompt=db_chat.context)
+    chat_memory = create_memory(
+        chat_id=chat_id,
+        llm=llm,
+        messages=chat_history,
+        vector_store=chroma_vector_store,
+        token_limit=128_000,
+        system_prompt=db_chat.context,
+    )
 
     for file_id, file_params in chat.params.files.items():
         files_to_query = [file for file in files if file.id == file_id and file_params.queried == True]
-        query_engine_tools = (
-            create_query_engine_tools(files=files_to_query, chroma_vector_store=chroma_vector_store, llm=llm, params=file_params)
+        query_engine_tools = create_query_engine_tools(
+            files=files_to_query,
+            chroma_vector_store=chroma_vector_store,
+            llm=llm,
+            params=file_params,
         )
         if len(query_engine_tools) > 0:
             tools += query_engine_tools
         for file in files_to_query:
-            if file.id == file_id and file_params.query_type == 'sql':
-                sql_tools = create_sql_engines_tools_from_files(files=files_to_query,
-                                                                chroma_vector_store=chroma_vector_store)
+            if file.id == file_id and file_params.query_type == "sql":
+                sql_tools = create_sql_engines_tools_from_files(
+                    files=files_to_query, chroma_vector_store=chroma_vector_store
+                )
                 tools += sql_tools
-            if file.id == file_id and file_params.query_type == 'spreadsheet':
+            if file.id == file_id and file_params.query_type == "spreadsheet":
                 pd_tools = create_pandas_engines_tools_from_files(files=files_to_query)
                 tools += pd_tools
-    
+
     if chat.params.use_link_scraping:
         scrape_tool = create_url_loader_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
         tools.append(scrape_tool)
@@ -440,21 +547,31 @@ async def chat_stream(chat_id: str, chat: ChatQuery,
         tools.append(search_engine_tool)
 
     agent = create_agent(system_prompt=db_chat.context, tools=tools, llm=llm)
-    streaming_generator = stream_agent_response(agent=agent, user_input=chat.text, db_client=db_client,
-                                                chat_id=db_chat.id, user_message=user_message, chat_memory=chat_memory)
+    streaming_generator = stream_agent_response(
+        agent=agent,
+        user_input=chat.text,
+        db_client=db_client,
+        chat_id=db_chat.id,
+        user_message=user_message,
+        chat_memory=chat_memory,
+    )
 
     return StreamingResponse(streaming_generator, media_type="text/event-stream")
 
+
 @router.post("/{chat_id}/chat")
-async def chat_with_given_chat_id(chat_id: str, chat: ChatQuery,
-                                  db_client: SessionDep = SessionDep,
-                                  request: Request = Request,
-                                  redis_client: Redis = Depends(get_redis_client),
-                                  chroma_vector_store: ChromaVectorStore = Depends(get_chroma_vector)):
+async def chat_with_given_chat_id(
+    chat_id: str,
+    chat: ChatQuery,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    chroma_vector_store: ChromaVectorStore = Depends(get_chroma_vector),
+):
     """
     Interact with a specific chat by sending a message.
 
-    This endpoint allows the user to send a message to a chat and receive a response 
+    This endpoint allows the user to send a message to a chat and receive a response
     from the chat agent.
 
     - **chat_id**: The unique identifier of the chat.
@@ -488,15 +605,18 @@ async def chat_with_given_chat_id(chat_id: str, chat: ChatQuery,
         id=str(uuid.uuid4()),
         role=MessageRole.USER,
         text=chat.text,
-        block_type='text',
+        block_type="text",
         additional_kwargs={},
         chat_id=chat_id,
         created_at=datetime.now(),
     )
 
-    old_messages = (db_client.query(ChatMessage)
-                    .filter(ChatMessage.chat_id == chat_id)
-                    .order_by(ChatMessage.created_at.desc()).all())[:25]
+    old_messages = (
+        db_client.query(ChatMessage)
+        .filter(ChatMessage.chat_id == chat_id)
+        .order_by(ChatMessage.created_at.desc())
+        .all()
+    )[:25]
 
     chat_history = [
         LLMChatMessage(
@@ -531,8 +651,18 @@ async def chat_with_given_chat_id(chat_id: str, chat: ChatQuery,
     else:
         model_from_chat = "llama3.3:70b"
 
-    llm = Ollama(model=model_from_chat, temperature=db_chat.temperature, request_timeout=500, base_url=base_url)
-    agent = create_agent(memory=chat_memory, system_prompt=PromptTemplate(db_chat.context), tools=tools, llm=llm)
+    llm = Ollama(
+        model=model_from_chat,
+        temperature=db_chat.temperature,
+        request_timeout=500,
+        base_url=base_url,
+    )
+    agent = create_agent(
+        memory=chat_memory,
+        system_prompt=PromptTemplate(db_chat.context),
+        tools=tools,
+        llm=llm,
+    )
     agent_response: AgentChatResponse = await agent.achat(chat.text)
 
     db_chat.last_interacted_at = datetime.now()
@@ -542,11 +672,11 @@ async def chat_with_given_chat_id(chat_id: str, chat: ChatQuery,
             id=str(uuid.uuid4()),
             role=MessageRole.ASSISTANT,
             text=agent_response.response,
-            block_type='text',
+            block_type="text",
             additional_kwargs={},
             chat_id=chat_id,
             created_at=datetime.now(),
-        )
+        ),
     ]
     for chat_message in chat_messages:
         db_chat.messages.append(chat_message)
@@ -555,25 +685,25 @@ async def chat_with_given_chat_id(chat_id: str, chat: ChatQuery,
     db_client.refresh(db_chat)
 
     return {
-        **db_chat.model_dump(),
-        "message": {
-            "response": agent_response,
-            "role": "assistant"
-        },
+        **serialize_chat(db_chat),
+        "message": {"response": agent_response, "role": "assistant"},
     }
 
 
 @router.post("/{chat_id}/upload")
-async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
-                              db_client: SessionDep = SessionDep,
-                              request: Request = Request,
-                              chroma_collection: Collection = Depends(get_chroma_collection),
-                              redis_session: Redis = Depends(get_redis_client),
-                              background_tasks: BackgroundTasks = BackgroundTasks):
+async def upload_file_to_chat(
+    chat_id: str,
+    file: UploadFile = File(...),
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    chroma_collection: Collection = Depends(get_chroma_collection),
+    redis_session: Redis = Depends(get_redis_client),
+    background_tasks: BackgroundTasks = BackgroundTasks,
+):
     """
     Upload a file to a specific chat.
 
-    This endpoint allows the user to upload a file to a chat. If the file is an SQL dump, 
+    This endpoint allows the user to upload a file to a chat. If the file is an SQL dump,
     it will be processed and indexed in the background.
 
     - **chat_id**: The unique identifier of the chat.
@@ -603,7 +733,7 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
         raise HTTPException(status_code=404, detail="Chat does not belong to user")
     # If file is not attached to Upload, raise Error
     if not file.filename:
-        logger.error(f"Does not have a File")
+        logger.error("Does not have a File")
         raise HTTPException(status_code=404, detail="File not found")
     # If file is already uploaded, raise Error
     for chat_file in db_chat.files:
@@ -623,8 +753,10 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
         mime_type=file.content_type,
         file_name=file.filename,
         indexed=None
-        if any(ext in file.content_type.lower() or ext in file.filename.lower()
-               for ext in ["sql", "xlsx", "spreadsheet", "csv"])
+        if any(
+            ext in file.content_type.lower() or ext in file.filename.lower()
+            for ext in ["sql", "xlsx", "spreadsheet", "csv"]
+        )
         else False,
     )
 
@@ -634,9 +766,16 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
         db_file.database_name = database_name
         database_type = detect_sql_dump_type(str(file_path))
         db_file.database_type = database_type
-        background_tasks.add_task(process_dump_to_persist, db_client=db_client, chat_id=chat_id,
-                                  sql_dump_path=str(file_path), database_type=database_type, chat_file_id=db_file.id,
-                                  db_name=database_name, chroma_collection=chroma_collection)
+        background_tasks.add_task(
+            process_dump_to_persist,
+            db_client=db_client,
+            chat_id=chat_id,
+            sql_dump_path=str(file_path),
+            database_type=database_type,
+            chat_file_id=db_file.id,
+            db_name=database_name,
+            chroma_collection=chroma_collection,
+        )
 
     try:
         # indexes file
@@ -644,12 +783,20 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
         db_chat.files.append(db_file)
         db_client.commit()
 
-        if not any(ext in file.content_type.lower() or ext in file.filename.lower()
-                   for ext in ["sql", "xlsx", "spreadsheet", "csv"]):
-            background_tasks.add_task(index_uploaded_file, path=str(file_path), chat_file=db_file,
-                                      chroma_collection=chroma_collection, db_client=db_client)
-        if any(ext in file.content_type.lower() or ext in file.filename.lower()
-               for ext in ["xlsx", "spreadsheet", "csv"]):
+        if not any(
+            ext in file.content_type.lower() or ext in file.filename.lower()
+            for ext in ["sql", "xlsx", "spreadsheet", "csv"]
+        ):
+            background_tasks.add_task(
+                index_uploaded_file,
+                path=str(file_path),
+                chat_file=db_file,
+                chroma_collection=chroma_collection,
+                db_client=db_client,
+            )
+        if any(
+            ext in file.content_type.lower() or ext in file.filename.lower() for ext in ["xlsx", "spreadsheet", "csv"]
+        ):
             md_id = str(uuid.uuid4())
             md_file_path = f"{os.getcwd()}/uploads/{db_chat.id}/{file.filename.split('.')[0]}.md"
             md_file = ChatFile(
@@ -658,7 +805,7 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
                 path_name=md_file_path,
                 indexed=False,
                 chat_id=chat_id,
-                mime_type="text/markdown"
+                mime_type="text/markdown",
             )
             try:
                 db_chat.files.append(md_file)
@@ -667,13 +814,15 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
             except Exception as e:
                 logger.error(e)
                 db_client.rollback()
-            background_tasks.add_task(index_spreadsheet, chroma_collection=chroma_collection,
-                                      file=db_file,
-                                      db_client=db_client)
+            background_tasks.add_task(
+                index_spreadsheet,
+                chroma_collection=chroma_collection,
+                file=db_file,
+                db_client=db_client,
+            )
         db_client.refresh(db_chat)
         return {
-            **db_chat.model_dump(),
-            'files': db_chat.files,
+            **serialize_chat(db_chat, include_files=True),
         }
     except Exception as e:
         db_client.rollback()
@@ -683,16 +832,16 @@ async def upload_file_to_chat(chat_id: str, file: UploadFile = File(...),
 
 @router.post("/")
 async def create_chat(
-        chat: str = Form(...),
-        file: Optional[UploadFile] = None,
-        db_client: SessionDep = SessionDep,
-        request: Request = Request,
-        redis_client: Redis = Depends(get_redis_client)
+    chat: str = Form(...),
+    file: UploadFile | None = None,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
 ):
     """
     Create a new chat.
 
-    This endpoint allows the user to create a new chat. Optionally, an avatar image 
+    This endpoint allows the user to create a new chat. Optionally, an avatar image
     can be uploaded for the chat.
 
     - **chat**: The chat data in JSON format.
@@ -708,27 +857,20 @@ async def create_chat(
     - 404: If the session ID is not found in cookies.
     - 400: If the avatar image format is invalid.
     """
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error("Session id cookie not found")
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
 
     chat_id = str(uuid.uuid4())
     avatar_path = None
 
     if file and file.filename:
         # Get file extension
-        ext = file.filename.split('.')[-1].lower()
-        if ext not in ['jpg', 'jpeg', 'png', 'gif']:
+        ext = file.filename.split(".")[-1].lower()
+        if ext not in ["jpg", "jpeg", "png", "gif"]:
             logger.error("Invalid image format for chat avatar")
             raise HTTPException(status_code=400, detail="Invalid image format")
 
         # Create avatars directory if it doesn't exist
-        avatar_dir = BASE_UPLOAD_DIR / 'avatars'
+        avatar_dir = BASE_UPLOAD_DIR / "avatars"
         avatar_dir.mkdir(parents=True, exist_ok=True)
 
         # Save file
@@ -737,12 +879,7 @@ async def create_chat(
             buffer.write(file.file.read())
 
     chat_data = json.loads(chat)
-    db_chat = Chat(
-        **chat_data,
-        user_id=user_id,
-        id=chat_id,
-        avatar_path=str(avatar_path)
-    )
+    db_chat = Chat(**chat_data, user_id=user_id, id=chat_id, avatar_path=str(avatar_path))
 
     try:
         db_client.add(db_chat)
@@ -754,20 +891,23 @@ async def create_chat(
         return Response(status_code=500, content="Chat create error.")
 
     return {
-        **db_chat.model_dump(),
-        'files': db_chat.files,
+        **serialize_chat(db_chat, include_files=True),
     }
 
 
 @router.put("/{chat_id}")
-async def update_chat(chat_id: str, chat: str = Form(...), file: UploadFile = File(None),
-                      request: Request = Request,
-                      db_client: SessionDep = SessionDep,
-                      redis_client: Redis = Depends(get_redis_client)):
+async def update_chat(
+    chat_id: str,
+    chat: str = Form(...),
+    file: UploadFile = File(None),
+    request: Request = Request,
+    db_client: SessionDep = SessionDep,
+    redis_client: Redis = Depends(get_redis_client),
+):
     """
     Update an existing chat.
 
-    This endpoint allows the user to update the details of an existing chat. Optionally, 
+    This endpoint allows the user to update the details of an existing chat. Optionally,
     a new avatar image can be uploaded.
 
     - **chat_id**: The unique identifier of the chat.
@@ -798,13 +938,13 @@ async def update_chat(chat_id: str, chat: str = Form(...), file: UploadFile = Fi
 
     if file and file.filename:
         # Get file extension
-        ext = file.filename.split('.')[-1].lower()
-        if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        ext = file.filename.split(".")[-1].lower()
+        if ext not in ["jpg", "jpeg", "png", "gif", "webp"]:
             logger.error("Invalid image format for chat avatar")
             raise HTTPException(status_code=400, detail="Invalid image format")
 
         # Create avatars directory if it doesn't exist
-        avatar_dir = BASE_UPLOAD_DIR / 'avatars'
+        avatar_dir = BASE_UPLOAD_DIR / "avatars"
         avatar_dir.mkdir(parents=True, exist_ok=True)
 
         # Save new file
@@ -812,9 +952,19 @@ async def update_chat(chat_id: str, chat: str = Form(...), file: UploadFile = Fi
         with open(avatar_path, "wb+") as buffer:
             buffer.write(file.file.read())
 
-    # Update the entry
+    # Update mutable chat fields explicitly (SQLAlchemy model, no sqlmodel_update helper).
     chat_data = json.loads(chat)
-    db_chat.sqlmodel_update(chat_data)
+    updatable_fields = {
+        "title",
+        "description",
+        "context",
+        "temperature",
+        "model",
+        "model_provider",
+    }
+    for field_name in updatable_fields:
+        if field_name in chat_data:
+            setattr(db_chat, field_name, chat_data[field_name])
     if avatar_path:
         db_chat.avatar_path = str(avatar_path)
 
@@ -824,20 +974,22 @@ async def update_chat(chat_id: str, chat: str = Form(...), file: UploadFile = Fi
     db_client.refresh(db_chat)
 
     return {
-        **db_chat.model_dump(),
-        'files': db_chat.files,
+        **serialize_chat(db_chat, include_files=True),
     }
 
 
 @router.delete("/{chat_id}")
-async def delete_chat(chat_id: str, db_client: SessionDep = SessionDep,
-                      request: Request = Request,
-                      redis_client: Redis = Depends(get_redis_client),
-                      chroma_collection: Collection = Depends(get_chroma_collection)):
+async def delete_chat(
+    chat_id: str,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    chroma_collection: Collection = Depends(get_chroma_collection),
+):
     """
     Delete a chat.
 
-    This endpoint allows the user to delete a chat and all its associated files, 
+    This endpoint allows the user to delete a chat and all its associated files,
     messages, and avatar.
 
     - **chat_id**: The unique identifier of the chat.
@@ -880,19 +1032,23 @@ async def delete_chat(chat_id: str, db_client: SessionDep = SessionDep,
     db_client.delete(db_chat)
     db_client.commit()
     return {
-        **db_chat.model_dump(),
+        **serialize_chat(db_chat),
     }
 
 
 @router.delete("/{chat_id}/delete/{file_id}")
-async def delete_file_of_chat(chat_id: str, file_id: str, db_client: SessionDep = SessionDep,
-                              request: Request = Request,
-                              redis_client: Redis = Depends(get_redis_client),
-                              chroma_collection: Collection = Depends(get_chroma_collection)):
+async def delete_file_of_chat(
+    chat_id: str,
+    file_id: str,
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    chroma_collection: Collection = Depends(get_chroma_collection),
+):
     """
     Delete a file from a chat.
 
-    This endpoint allows the user to delete a specific file from a chat. If the file 
+    This endpoint allows the user to delete a specific file from a chat. If the file
     is an SQL dump, the associated database will also be deleted.
 
     - **chat_id**: The unique identifier of the chat.
@@ -943,6 +1099,5 @@ async def delete_file_of_chat(chat_id: str, file_id: str, db_client: SessionDep 
     db_client.refresh(db_chat)
 
     return {
-        **db_chat.model_dump(),
-        'files': db_chat.files,
+        **serialize_chat(db_chat, include_files=True),
     }

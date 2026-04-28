@@ -1,100 +1,157 @@
-from fastapi import FastAPI, Depends
-from starlette.exceptions import HTTPException
-from starlette.requests import Request
-from starlette.responses import (
-    RedirectResponse, 
-    JSONResponse, 
-    Response
-)
-from routers import route
-from dependencies import (
-    create_db_and_tables, 
-    get_redis_client, 
-    logger, 
-    base_url
-)
-from msal import ConfidentialClientApplication
+import asyncio
+import os
+import uuid
+from pathlib import Path
+
+import requests
 from dotenv import load_dotenv
-from redis import Redis
-from fastapi_pagination import add_pagination
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from utils import decode_jwt
-from llama_index.core.settings import Settings
+from fastapi_pagination import add_pagination
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
+from llama_index.core.settings import Settings
+from msal import ConfidentialClientApplication
+from redis import Redis
+from starlette.exceptions import HTTPException
+from starlette.requests import Request
+from starlette.responses import JSONResponse, RedirectResponse, Response
 
-import os
-import asyncio
-import uuid
-import requests
+from backend.dependencies import base_url, get_redis_client, logger
+from backend.routers.route import router
+from backend.utils.jwt import decode_jwt
+
+
+def check_required_env_vars():
+    import sys
+
+    required_vars = [
+        "CLIENT_ID",
+        "CLIENT_SECRET",
+        "TENANT_ID",
+        "REDIRECT_URI",
+        "FRONTEND_URL",
+        "ALLOWED_GROUPS_IDS",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "DATABASE_URL",
+        "PG_HOST",
+        "PG_PORT",
+        "PG_USER",
+        "PG_PASSWORD",
+        "PG_COLLECTION",
+        "MYSQL_HOST",
+        "MYSQL_PORT",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "CHROMA_HOST",
+        "CHROMA_PORT",
+        "PHOENIX_API_KEY",
+        "PHOENIX_COLLECTOR_ENDPOINT",
+    ]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    if missing_vars:
+        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+        sys.exit(1)
+
+
+def _is_endpoint_reachable(url: str, timeout: float = 1.0) -> bool:
+    """Return True when an HTTP endpoint is reachable (status code is irrelevant)."""
+    try:
+        response = requests.get(url, timeout=timeout)
+        return response.status_code >= 100
+    except requests.RequestException:
+        return False
+
 
 # loads envs and setup Phoenix monitoring
 try:
     load_dotenv()
-    phoenix_key, phoenix_url = os.getenv('PHOENIX_API_KEY'), os.getenv('PHOENIX_URL')
-    if phoenix_key is None and phoenix_url is None:
-        logger.error(f"No Phoenix API key or URL found, skipping Arize Phoenix Tracing setup")
+    phoenix_key, phoenix_url = os.getenv("PHOENIX_API_KEY"), os.getenv("PHOENIX_COLLECTOR_ENDPOINT")
+    if not phoenix_key or not phoenix_url:
+        logger.info("Phoenix tracing disabled: PHOENIX_API_KEY or PHOENIX_COLLECTOR_ENDPOINT is missing")
+    elif not _is_endpoint_reachable(phoenix_url):
+        logger.warning(f"Phoenix tracing disabled: endpoint unreachable at {phoenix_url}")
     else:
         from openinference.instrumentation.llama_index import LlamaIndexInstrumentor
         from phoenix.otel import register
+
         logger.info(f"Setting up Arize Phoenix Tracing at: {phoenix_url}")
-        tracer_provider = register(project_name="llama-rag",
-                                endpoint=f"{phoenix_url}/v1/traces",
-                                set_global_tracer_provider=False,
-                                batch=True)
+        tracer_provider = register(
+            project_name="globalct-insights", auto_instrument=True, batch=True, set_global_tracer_provider=False
+        )
         LlamaIndexInstrumentor().instrument(tracer_provider=tracer_provider)
 except Exception as e:
     logger.error(f"Startup error: {e}")
-    
-# Create dir uploads/avatars if it doesn't exist
-if not os.path.exists("uploads/avatars"):
-    os.makedirs("uploads/avatars")
-    logger.info("Created directory uploads/avatars")
+
+
+base_dir = Path(__file__).resolve().parent
+uploads_dir = base_dir / "uploads" / "avatars"
+
+if not uploads_dir.exists():
+    # parents=True ensures 'uploads' is created if it doesn't exist
+    # exist_ok=True prevents errors if another process creates it simultaneously
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Created directory: {uploads_dir}")
 
 # Settings global
-provider = os.getenv('LLM_PROVIDER', 'OLLAMA')
+provider = os.getenv("LLM_PROVIDER", "OLLAMA")
 api_key = None
-base_url = None
 llm = None
 embed_model = None
 
 # Initialize LLM and embedding model based on provider
-if provider == 'IONOS':
-    from llama_index.llms.openai_like import OpenAILike
+if provider == "IONOS":
     from llama_index.embeddings.openai import OpenAIEmbedding
+    from llama_index.llms.openai_like import OpenAILike
+
     base_url = os.getenv("IONOS_BASE_URL", "http://localhost:11434")
     api_key = os.getenv("IONOS_API_KEY", "your_api_key_here")
     os.environ["OPENAI_API_BASE"] = base_url
     os.environ["OPENAI_API_KEY"] = api_key
     headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
     }
-    
+
     llm = OpenAILike(
         api_base=base_url,
         temperature=0,
-        model='meta-llama/Llama-3.3-70B-Instruct',
+        model="meta-llama/Llama-3.3-70B-Instruct",
         is_chat_model=True,
         default_headers=headers,
         api_key=api_key,
         context_window=128000,
-        request_timeout=420
+        request_timeout=420,
     )
     embed_model = OpenAIEmbedding(
-        model_name='BAAI/bge-m3',
+        model_name="BAAI/bge-m3",
         api_base=base_url,
         api_key=api_key,
         default_headers=headers,
-        embed_batch_size=10
+        embed_batch_size=10,
     )
-else:    
-    from llama_index.llms.ollama import Ollama
+elif provider == "OLLAMA":
     from llama_index.embeddings.ollama import OllamaEmbedding
-    llm = Ollama(model=os.getenv('OLLAMA_MODEL', 'llama3.1'), base_url=base_url, request_timeout=420)
-    embed_model = OllamaEmbedding(model_name=os.getenv('OLLAMA_EMBED_MODEL', 'mxbai-embed-large'), base_url=base_url)
-    
+    from llama_index.llms.ollama import Ollama
+
+    llm = Ollama(
+        model=os.getenv("OLLAMA_MODEL", "llama3.1"),
+        base_url=base_url,
+        request_timeout=420,
+    )
+    embed_model = OllamaEmbedding(
+        model_name=os.getenv("OLLAMA_EMBED_MODEL", "mxbai-embed-large"),
+        base_url=base_url,
+    )
+else:
+    from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+    from llama_index.llms.google_genai import GoogleGenAI
+
+    llm = GoogleGenAI(model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"), temperature=0.75)
+    embed_model = GoogleGenAIEmbedding()
+
 # Set global settings for LLM and embedding model
 Settings.llm = llm
 Settings.embed_model = embed_model
@@ -102,27 +159,33 @@ Settings.chunk_size = 512
 Settings.chunk_overlap = 20
 
 PORT = int(os.environ.get("PORT", 4000))
-ALLOWED_GROUPS_IDS = os.getenv("ALLOWED_GROUPS_IDS").split(',')
-CLIENT_ID=os.getenv("CLIENT_ID")
-CLIENT_SECRET=os.getenv("CLIENT_SECRET")
-TENANT_ID=os.getenv("TENANT_ID")
-AUTHORITY=f"https://login.microsoftonline.com/{TENANT_ID}"
+ALLOWED_GROUPS_IDS = os.getenv("ALLOWED_GROUPS_IDS").split(",")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+TENANT_ID = os.getenv("TENANT_ID")
+AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SCOPES = ["User.Read"]
 REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:4000/redirect")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-origins = [
-    "http://localhost",
-    "http://localhost:3000",  # Default Next.js dev server
-    "http://localhost:4000",  # Make sure this is included
-    "http://localhost:5173",
-    FRONTEND_URL,
-]
+ENV = os.getenv("ENV", "development")
+if ENV == "production":
+    origins = [
+        FRONTEND_URL,
+    ]
+else:
+    origins = [
+        "http://localhost",
+        "http://localhost:3000",  # Default Next.js dev server
+        "http://localhost:4000",  # Make sure this is included
+        "http://localhost:5173",
+        FRONTEND_URL,
+    ]
 
 azure_app = ConfidentialClientApplication(CLIENT_ID, CLIENT_SECRET, AUTHORITY)
 
 app = FastAPI()
-app.include_router(route.router)
+app.include_router(router)
 add_pagination(app)
 app.add_middleware(
     CORSMiddleware,
@@ -131,18 +194,23 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
-app.mount("/uploads/avatars", StaticFiles(directory="uploads/avatars"), name="avatar")
+
+app.mount("/uploads/avatars", StaticFiles(directory="backend/uploads/avatars"), name="avatar")
+
 
 def user_is_part_of_group(user_groups: list[str], allowed_groups: list[str]) -> bool:
     return bool(set(user_groups) & set(allowed_groups))
 
+
 # Middleware to log requests
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    logger.info(f"Request: {request.method} {request.url}, \n "
-                f"ip-address: {request.client.host} \n "
-                f"agent: {request.headers.get('User-Agent')} \n "
-                f"accept: {request.headers.get('Accept')}")
+    logger.info(
+        f"Request: {request.method} {request.url}, \n "
+        f"ip-address: {request.client.host} \n "
+        f"agent: {request.headers.get('User-Agent')} \n "
+        f"accept: {request.headers.get('Accept')}"
+    )
     try:
         response = await call_next(request)
     except Exception as ex:
@@ -150,11 +218,15 @@ async def log_requests(request: Request, call_next):
         raise
     return response
 
-@app.on_event("startup")
-def on_startup():
-    logger.debug(f"Redirect url: {REDIRECT_URI} \n FRONTEND_URL: {FRONTEND_URL}")
-    logger.debug("Creating tables for Database")
-    create_db_and_tables()
+
+# @app.on_event("startup")
+# def on_startup():
+#     logger.debug(f"Redirect url: {REDIRECT_URI} \n FRONTEND_URL: {FRONTEND_URL}")
+#     logger.debug("Creating tables for Database")
+#     # NOTE: In production, use Alembic migrations (alembic upgrade head) instead of this.
+#     # This is kept for development/testing convenience only.
+#     create_db_and_tables()
+
 
 @app.get("/signin")
 async def azure_signin(request: Request):
@@ -173,6 +245,7 @@ async def azure_signin(request: Request):
     auth_url = azure_app.get_authorization_request_url(SCOPES, redirect_uri=REDIRECT_URI)
     logger.info("Signed in user IP: ", request.client.host)
     return RedirectResponse(url=auth_url)
+
 
 @app.get("/logout")
 def azure_logout(redis_client: Redis = Depends(get_redis_client), request: Request = Request):
@@ -193,6 +266,7 @@ def azure_logout(redis_client: Redis = Depends(get_redis_client), request: Reque
         raise HTTPException(status_code=401, detail="Not logged in")
     redis_client.delete(f"session:{session_id}")
     return RedirectResponse(url=FRONTEND_URL)
+
 
 @app.get("/redirect")
 def auth_callback(request: Request, redis_client: Redis = Depends(get_redis_client)):
@@ -232,6 +306,7 @@ def auth_callback(request: Request, redis_client: Redis = Depends(get_redis_clie
     else:
         return JSONResponse({"error": "Failed to retrieve access token"}, status_code=400)
 
+
 @app.get("/me")
 async def get_user_claims(request: Request, redis_client: Redis = Depends(get_redis_client)):
     """
@@ -261,7 +336,7 @@ async def get_user_claims(request: Request, redis_client: Redis = Depends(get_re
     token = redis_client.get(f"session:{session_id}")
 
     claims = decode_jwt(token)
-    if 'isDev' in claims and claims['isDev'] == True:
+    if "isDev" in claims and claims["isDev"] == True:
         user = {
             **claims,
         }
@@ -272,7 +347,7 @@ async def get_user_claims(request: Request, redis_client: Redis = Depends(get_re
         return response
 
     headers = {
-        'Authorization': f"Bearer {token}",
+        "Authorization": f"Bearer {token}",
     }
     user_info = requests.get("https://graph.microsoft.com/v1.0/me", headers=headers).json()
     group_info = requests.get("https://graph.microsoft.com/v1.0/me/memberOf", headers=headers).json()
@@ -290,8 +365,7 @@ async def get_user_claims(request: Request, redis_client: Redis = Depends(get_re
 
 
 @app.get("/profile-picture")
-async def get_profile_picture(request: Request,
-                              redis_client: Redis = Depends(get_redis_client)):
+async def get_profile_picture(request: Request, redis_client: Redis = Depends(get_redis_client)):
     """
     Fetches the user's profile picture from Microsoft Graph API.
 
@@ -336,6 +410,7 @@ async def get_profile_picture(request: Request,
     else:
         logger.error(f"Failed to get session id for user: {request.client.host}")
         raise HTTPException(status_code=500, detail="Error fetching profile picture")
+
 
 if __name__ == "__main__":
     logger.debug(f"Backend running at port: {PORT}")

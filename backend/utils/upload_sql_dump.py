@@ -1,9 +1,10 @@
-import mysql.connector
-import psycopg2
 import os
 import re
 
-from dependencies import logger
+import mysql.connector
+import psycopg2
+
+from backend.dependencies import logger
 
 pg_host = os.getenv("PG_HOST", "localhost")
 pg_port = os.getenv("PG_PORT", 5432)
@@ -15,7 +16,8 @@ mysql_port = os.getenv("MYSQL_PORT", 3306)
 mysql_user = os.getenv("MYSQL_USER", "root")
 mysql_password = os.getenv("MYSQL_PASSWORD", "<PASSWORD>")
 
-class PostgresMigration():
+
+class PostgresMigration:
     """
     A utility class for migrating data from a MySQL database to a PostgreSQL database
     and optionally deleting the old MySQL database.
@@ -39,6 +41,7 @@ class PostgresMigration():
         mysql_port (int): The port number for the MySQL server.
         mysql_db (str): Alias for the MySQL database name.
     """
+
     def __init__(self, host: str, port: int, user: str, password: str, db: str):
         self.mysql_host = host
         self.mysql_user = user
@@ -47,7 +50,15 @@ class PostgresMigration():
         self.mysql_port = port
         self.mysql_db = db
 
-    def migrate_mysql_to_pg(self, pg_host: str, pg_port: int, pg_user: str, pg_password: str, pg_db: str, **kwargs):
+    def migrate_mysql_to_pg(
+        self,
+        pg_host: str,
+        pg_port: int,
+        pg_user: str,
+        pg_password: str,
+        pg_db: str,
+        **kwargs,
+    ):
         """
         Migrates a MySQL database to a PostgreSQL database using pgloader.
 
@@ -80,7 +91,7 @@ class PostgresMigration():
                 user=pg_user,
                 password=pg_password,
                 dbname="postgres",
-                **kwargs
+                **kwargs,
             )
             conn.autocommit = True
             cursor = conn.cursor()
@@ -95,7 +106,9 @@ class PostgresMigration():
             logger.error(f"General Error: {e}")
 
         try:
-            mysql_url = f"mysql://{self.mysql_user}:{self.mysql_password}@{self.mysql_host}:{self.mysql_port}/{self.mysql_db}"
+            mysql_url = (
+                f"mysql://{self.mysql_user}:{self.mysql_password}@{self.mysql_host}:{self.mysql_port}/{self.mysql_db}"
+            )
             pg_url = f"pgsql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
             os.system(f"pgloader {mysql_url} {pg_url}")
         except Exception as e:
@@ -125,7 +138,7 @@ class PostgresMigration():
                 user=self.mysql_user,
                 password=self.mysql_password,
                 port=self.mysql_port,
-                **kwargs
+                **kwargs,
             )
             cursor = conn.cursor()
             cursor.execute(f"DROP DATABASE {self.mysql_db}")
@@ -134,6 +147,7 @@ class PostgresMigration():
             conn.close()
         except mysql.connector.Error as e:
             logger.error(f"MySQL Error: {e}")
+
 
 def initialize_pg_url(pg_db: str):
     """
@@ -147,11 +161,12 @@ def initialize_pg_url(pg_db: str):
              "postgresql://<pg_user>:<pg_password>@<pg_host>:<pg_port>/<pg_db>".
 
     Note:
-        This function assumes that the variables `pg_user`, `pg_password`, 
-        `pg_host`, and `pg_port` are defined and accessible in the scope 
+        This function assumes that the variables `pg_user`, `pg_password`,
+        `pg_host`, and `pg_port` are defined and accessible in the scope
         where this function is called.
     """
     return f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+
 
 def load_mysql_dump(host: str, port: int, user: str, password: str, db: str, dump_path: str, **kwargs):
     """
@@ -180,13 +195,7 @@ def load_mysql_dump(host: str, port: int, user: str, password: str, db: str, dum
         - The connection is automatically committed after each statement.
     """
     try:
-        conn = mysql.connector.connect(
-            host=host,
-            user=user,
-            password=password,
-            port=port,
-            **kwargs
-        )
+        conn = mysql.connector.connect(host=host, user=user, password=password, port=port, **kwargs)
         cursor = conn.cursor()
 
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db};")
@@ -195,7 +204,7 @@ def load_mysql_dump(host: str, port: int, user: str, password: str, db: str, dum
         conn.database = db
         conn.autocommit = True
 
-        with open(dump_path, "r", encoding="utf-8") as file:
+        with open(dump_path, encoding="utf-8") as file:
             sql_script = file.read()
 
         sql_script = re.sub(r"(?i)CREATE DATABASE.*?;", "", sql_script)
@@ -213,6 +222,7 @@ def load_mysql_dump(host: str, port: int, user: str, password: str, db: str, dum
     finally:
         cursor.close()
         conn.close()
+
 
 def load_pgsql_dump(host: str, port: int, user: str, password: str, db: str, dump_path: str, **kwargs):
     """
@@ -243,7 +253,7 @@ def load_pgsql_dump(host: str, port: int, user: str, password: str, db: str, dum
             user=pg_user,
             password=pg_password,
             dbname="postgres",
-            **kwargs
+            **kwargs,
         )
         conn.autocommit = True
         cursor = conn.cursor()
@@ -259,6 +269,7 @@ def load_pgsql_dump(host: str, port: int, user: str, password: str, db: str, dum
         logger.error(f"PostgreSQL Error: {e}")
     finally:
         os.system(f"PGPASSWORD={password} psql -U {user}  -h {host} -p {port} -d {db} < {dump_path}")
+
 
 def detect_sql_dump_type(file_path: str) -> str:
     """
@@ -279,11 +290,23 @@ def detect_sql_dump_type(file_path: str) -> str:
             - An error message if the file cannot be read.
     """
     """Detect if an SQL dump is from MySQL or PostgreSQL."""
-    mysql_keywords = {"ENGINE=", "AUTO_INCREMENT", "UNLOCK TABLES", "LOCK TABLES", "CHARSET="}
-    postgres_keywords = {"SET search_path", "SERIAL PRIMARY KEY", "RETURNING", "BIGSERIAL", "NOW()"}
+    mysql_keywords = {
+        "ENGINE=",
+        "AUTO_INCREMENT",
+        "UNLOCK TABLES",
+        "LOCK TABLES",
+        "CHARSET=",
+    }
+    postgres_keywords = {
+        "SET search_path",
+        "SERIAL PRIMARY KEY",
+        "RETURNING",
+        "BIGSERIAL",
+        "NOW()",
+    }
 
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as file:
+        with open(file_path, encoding="utf-8", errors="ignore") as file:
             for line in file:
                 line = line.strip().upper()
                 if any(keyword in line for keyword in mysql_keywords):
@@ -294,6 +317,7 @@ def detect_sql_dump_type(file_path: str) -> str:
     except Exception as e:
         logger.error(f"Error reading sql dump file: {e}")
         return f"Error reading file: {e}"
+
 
 def load_dump_to_database(sql_dump_path: str, db_name="TWICE"):
     """
@@ -320,12 +344,19 @@ def load_dump_to_database(sql_dump_path: str, db_name="TWICE"):
     if db == "MySQL":
         logger.debug(f"MySQL dump detected for file: {sql_dump_path}")
         load_mysql_dump(mysql_host, mysql_port, mysql_user, mysql_password, db_name, sql_dump_path)
-        migration = PostgresMigration(mysql_host, mysql_port, mysql_user, mysql_password, db_name,)
+        migration = PostgresMigration(
+            mysql_host,
+            mysql_port,
+            mysql_user,
+            mysql_password,
+            db_name,
+        )
         migration.migrate_mysql_to_pg(pg_host, pg_port, pg_user, pg_password, db_name)
         migration.delete_old_db_from_mysql()
     elif db == "Postgres":
         logger.debug(f"PostgreSQL dump detected for file: {sql_dump_path}")
         load_pgsql_dump(pg_host, pg_port, pg_user, pg_password, db_name, sql_dump_path)
+
 
 def list_all_tables_from_db(host: str, port: int, user: str, password: str, db: str, db_type: str, **kwargs):
     """
@@ -364,7 +395,7 @@ def list_all_tables_from_db(host: str, port: int, user: str, password: str, db: 
             **kwargs,
         )
         cursor = conn.cursor()
-        statement = f"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
+        statement = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
         if db_type == "MySQL":
             statement = f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{db}';"
         cursor.execute(statement)
@@ -380,6 +411,7 @@ def list_all_tables_from_db(host: str, port: int, user: str, password: str, db: 
     except psycopg2.Error as e:
         logger.error(f"PostgreSQL Error: {e}")
         return []
+
 
 def delete_database_from_postgres(database_name: str):
     """
@@ -406,7 +438,7 @@ def delete_database_from_postgres(database_name: str):
             port=pg_port,
             user=pg_user,
             password=pg_password,
-            dbname='postgres',
+            dbname="postgres",
         )
         conn.autocommit = True
         cursor = conn.cursor()

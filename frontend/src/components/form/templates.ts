@@ -1,10 +1,10 @@
 'use client';
 
-import hrImage from '@/static/templates/hr.jpeg';
-import engineerImage from '@/static/templates/engineer.webp';
-import softwareEngineerImage from '@/static/templates/software_engineer.webp';
+import hrImage from '@/static/templates/hr.png';
+import engineerImage from '@/static/templates/engineer.png';
+import softwareEngineerImage from '@/static/templates/software_engineer.png';
 import aiImage from '@/static/templates/helper.webp';
-import extractionImage from '@/static/templates/extraction.png';
+import extractionImage from '@/static/templates/consultant.png';
 
 const modellingText = `
 Your name is Anna Pham.
@@ -279,7 +279,7 @@ export const templates = [
       'Ein hilfreicher KI-Begleiter für all Ihre Anfragen und Aufgaben.',
     avatar_path: softwareEngineerImage,
     temperature: 0.75,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-pro-preview',
     context: aiText,
   },
   {
@@ -288,7 +288,7 @@ export const templates = [
       'Ein intelligenter Assistent, der Ihre Anliegen versteht und gleichzeitig auf das passende Hintergrundwissen aus Ihren Dokumenten zugreift – für fundierte und treffende Antworten.',
     avatar_path: aiImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-flash-lite-preview',
     context: classicRAGText,
   },
   {
@@ -297,7 +297,7 @@ export const templates = [
       'Sie beschreiben, was Sie wissen möchten – die KI erstellt die passende SQL-Abfrage für Ihre Datenbank. Ideal für Analysen, Reports und Auswertungen.',
     avatar_path: engineerImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3-flash-preview',
     context: sqlText,
   },
   {
@@ -306,7 +306,7 @@ export const templates = [
       'Stellen Sie eine Frage oder laden Sie ein Dokument hoch – die Modelliererin findet die relevanten Informationen und bringt Klarheit in Ihre Daten.',
     avatar_path: hrImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-pro-preview',
     context: modellingText,
   },
   {
@@ -315,7 +315,7 @@ export const templates = [
       'Einfach hochladen – und die KI liest für Sie das Dokument aus. Perfekt für Verträge, Berichte oder Formulare.',
     avatar_path: extractionImage,
     temperature: 0,
-    model: 'llama3.3:70b',
+    model: 'gemini-3.1-pro-preview',
     context: textExtractorText,
   },
 ];
@@ -341,20 +341,6 @@ export const defaultModels = [
       'LLama 3.3 von Meta ist ein ausgewogenes Sprachmodell mit erweiterten Fähigkeiten zur logischen Schlussfolgerung, Problemlösung und natürlicher Sprachverarbeitung. Es bietet eine hervorragende Balance zwischen Leistung und Effizienz und eignet sich ideal für anspruchsvolle Anwendungen wie komplexe Textgenerierung, detaillierte Analysen und fortgeschrittene Konversationsaufgaben. Es unterstützt mehrere Sprachen und ist besonders gut in der Verarbeitung von Kontext und der Generierung präziser Antworten.',
     isDefault: true,
   },
-  // {
-  //   id: 'deepseek-r1:70b',
-  //   name: 'Deepseek-r1:70b',
-  //   description:
-  //     'Deepseek-r1:70b ist eine erweiterte Version des Deepseek-Modells, das für hochpräzise technische und wissenschaftliche Analysen entwickelt wurde. Es zeichnet sich durch außergewöhnliche Fähigkeiten in der logischen Argumentation und der Verarbeitung technischer Sprache aus. Ideal für Forschung, Datenverarbeitung und wissenschaftliche Berichte, bietet es eine hohe Genauigkeit und Kapazität für komplexe Aufgaben.',
-  //   isDefault: false,
-  // },
-  // {
-  //   id: 'phi4:17b',
-  //   name: 'Phi 4',
-  //   description:
-  //     'Phi 4 ist ein hochmodernes Sprachmodell, das für kreative Anwendungen und komplexe Textgenerierung optimiert ist. Es bietet außergewöhnliche Fähigkeiten in der Verarbeitung natürlicher Sprache, kreativen Problemlösung und der Generierung innovativer Inhalte. Besonders geeignet für Marketing, kreative Schreibprojekte und interaktive Konversationen, unterstützt es mehrere Sprachen und passt sich flexibel an verschiedene Kontexte an.',
-  //   isDefault: false,
-  // },
 ];
 
 /**

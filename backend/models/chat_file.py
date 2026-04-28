@@ -1,42 +1,68 @@
-from typing import TYPE_CHECKING, Optional, List
-from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy import Column
-from sqlalchemy.ext.declarative import declarative_base
 import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-Base = declarative_base()
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import JSON, Boolean, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from backend.models import Base
 
 if TYPE_CHECKING:
     from models.chat import Chat
 
-class BaseChatFile(SQLModel):
-    file_name: str = Field(index=True, nullable=False)
-    path_name: str = Field(index=True, nullable=False)
-    mime_type: str = Field(index=True, nullable=False)
-    indexed: bool = Field(nullable=True)
-    chat_id: Optional[str] = Field(default=None, foreign_key="chats.id")
-    database_name: Optional[str] = Field(default=None, nullable=True, index=True)
-    database_type: Optional[str] = Field(default=None, nullable=True, index=True)
-    tables: List[str] | None = Field(default=None, sa_column=Column(JSON))
 
-class ChatFile(BaseChatFile, Base, table=True):
+class ChatFile(Base):
     __tablename__ = "chat_files"
-    id: str = Field(primary_key=True, nullable=False, default=str(uuid.uuid4()))
-    created_at: datetime = Field(default = datetime.now())
-    updated_at: datetime = Field(default = datetime.now())
-    chat: "Chat" = Relationship(back_populates="files")
 
-class ChatFilePublic(BaseChatFile):
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    file_name: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    path_name: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    indexed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    chat_id: Mapped[str | None] = mapped_column(String, ForeignKey("chats.id"), default=None)
+    database_name: Mapped[str | None] = mapped_column(String, default=None, nullable=True, index=True)
+    database_type: Mapped[str | None] = mapped_column(String, default=None, nullable=True, index=True)
+    tables: Mapped[list[str] | None] = mapped_column(JSON, default=None, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(default=datetime.now)
+
+    chat: Mapped["Chat"] = relationship("Chat", back_populates="files")
+
+
+class ChatFilePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
+    file_name: str
+    path_name: str
+    mime_type: str
+    indexed: bool | None
+    chat_id: str | None
+    database_name: str | None
+    database_type: str | None
+    tables: list[str] | None
     created_at: datetime
     updated_at: datetime
-    chat: "Chat"
 
-class ChatFileCreate(BaseChatFile):
-    pass
 
-class ChatFileUpdate(BaseChatFile):
-    pass
+class ChatFileCreate(BaseModel):
+    file_name: str
+    path_name: str
+    mime_type: str
+    indexed: bool | None = None
+    chat_id: str | None = None
+    database_name: str | None = None
+    database_type: str | None = None
+    tables: list[str] | None = None
 
+
+class ChatFileUpdate(BaseModel):
+    file_name: str
+    path_name: str
+    mime_type: str
+    indexed: bool | None = None
+    chat_id: str | None = None
+    database_name: str | None = None
+    database_type: str | None = None
+    tables: list[str] | None = None

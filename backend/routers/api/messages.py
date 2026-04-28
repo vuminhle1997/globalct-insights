@@ -1,15 +1,16 @@
-from routers.custom_router import APIRouter
 from fastapi import Depends
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate as sqlalchemy_pagination
 from redis import Redis
 from sqlmodel import Session
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from dependencies import get_db_session, get_redis_client
-from utils import decode_jwt
-from models import Chat, ChatMessage
-from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlalchemy import paginate as sqlalchemy_pagination
-from dependencies import logger
+
+from backend.dependencies import get_db_session, get_redis_client, logger
+from backend.models.chat import Chat
+from backend.models.chat_message import ChatMessage, ChatMessagePublic
+from backend.routers.custom_router import APIRouter
+from backend.utils import verify_session_and_get_user_id
 
 router = APIRouter(
     prefix="/messages",
@@ -17,10 +18,14 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get("/{chat_id}", response_model=Page[ChatMessage])
-async def get_messages_by_chat_id(chat_id: str, request: Request = Request,
-                                  redis_client: Redis = Depends(get_redis_client),
-                                  db_client: Session = Depends(get_db_session)):
+
+@router.get("/{chat_id}", response_model=Page[ChatMessagePublic])
+async def get_messages_by_chat_id(
+    chat_id: str,
+    request: Request = Request,
+    redis_client: Redis = Depends(get_redis_client),
+    db_client: Session = Depends(get_db_session),
+):
     """
     Retrieve paginated chat messages for a specific chat ID.
 
@@ -64,19 +69,20 @@ async def get_messages_by_chat_id(chat_id: str, request: Request = Request,
         }
     """
     query = db_client.query(ChatMessage)
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        logger.error(f"No session_id cookie found for {chat_id}")
-        raise HTTPException(status_code=404, detail="Not found")
-    token = redis_client.get(f"session:{session_id}")
-    claims = decode_jwt(token)
-    user_id = claims["oid"]
-    query = query.filter(ChatMessage.chat_id == chat_id).order_by(ChatMessage.created_at.desc())
-    page = sqlalchemy_pagination(query)
-    chat: Chat | None = page.items[0].chat if len(page.items) > 0 else None
+    user_id, _ = verify_session_and_get_user_id(request, redis_client)
 
-    if chat and not chat.user_id == user_id:
-        logger.error(f"Chat {chat.chat_id} does not belong to {user_id}")
+    chat: Chat | None = db_client.get(Chat, chat_id)
+    if chat is None:
+        logger.error(f"Chat {chat_id} not found")
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    if chat.user_id != user_id:
+        logger.error(f"Chat {chat_id} does not belong to {user_id}")
         raise HTTPException(status_code=404, detail="Chat does not belong to you")
+
+    query = query.filter(ChatMessage.chat_id == chat_id).order_by(
+        ChatMessage.created_at.desc()
+    )
+    page = sqlalchemy_pagination(query)
 
     return page

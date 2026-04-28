@@ -29,8 +29,8 @@ import {
   UseFormWatch,
 } from 'react-hook-form';
 import { Chat } from '@/frontend/types';
-import { defaultModels } from './templates';
 import { RefObject } from 'react';
+import { selectLLMModels, useAppSelector } from '@/frontend';
 
 type FormData = {
   title: string;
@@ -39,6 +39,7 @@ type FormData = {
   avatar?: FileList;
   temperature: number;
   model: string;
+  model_provider: string;
 };
 
 export interface ChatSettingsFormProps {
@@ -96,6 +97,7 @@ export default function ChatSettingsForm({
   isCreating,
   isUpdating,
 }: ChatSettingsFormProps) {
+  const models = useAppSelector(selectLLMModels);
   const isPending = mode === 'create' ? isCreating : isUpdating;
   return (
     <>
@@ -111,7 +113,8 @@ export default function ChatSettingsForm({
             {mode === 'create'
               ? 'Erstelle einen neuen Chat mit kontextbezogenen Inhalten. Füllen Sie alle erforderlichen Felder aus, um fortzufahren. Der Titel sollte prägnant sein, die Beschreibung kann zusätzliche Details enthalten, und der Kontext sollte die Rolle und den Kommunikationsstil des Chats definieren.'
               : 'Bearbeite die Einstellungen des bestehenden Chats. Stellen Sie sicher, dass alle Felder korrekt ausgefüllt sind, um die Änderungen zu speichern. Der Titel, die Beschreibung und der Kontext sind entscheidend für die Definition der Chat-Parameter.'}
-            <span className="text-gray-400 mt-4">
+            <br />
+            <span className="text-blue-800 mt-4">
               Markierte Felder mit * sind verpflichtend.
             </span>
           </DialogDescription>
@@ -125,7 +128,7 @@ export default function ChatSettingsForm({
               <div className="flex flex-col items-center gap-4">
                 <div
                   onClick={handleAvatarClick}
-                  className={`w-32 h-32 rounded-full overflow-hidden cursor-pointer relative group ${
+                  className={`w-60 h-60 rounded-full overflow-hidden cursor-pointer relative group ${
                     !avatarPreview
                       ? 'border-2 border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
                       : ''
@@ -261,39 +264,43 @@ export default function ChatSettingsForm({
             <Label htmlFor="model" className="text-right">
               Sprachmodell *
             </Label>
-            <div className="lg:col-span-3 col-span-full space-y-2">
-              <Select
-                defaultValue={'llama3.3:70b'}
-                value={watch('model')}
-                onValueChange={value => setValue('model', value)}
-              >
-                <SelectTrigger className="w-full h-[60px]">
-                  <SelectValue placeholder="Wählen Sie ein Sprachmodell" />
-                </SelectTrigger>
-                <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[300px]">
-                  {defaultModels.map(model => (
-                    <SelectItem
-                      key={model.id}
-                      value={model.id}
-                      className="flex flex-col items-start py-3"
-                    >
-                      <div className="flex flex-col justify-start items-start">
-                        <div className="font-medium text-base text-left">
-                          {model.name}
-                        </div>
-                        <div className="text-sm text-muted-foreground leading-snug text-left mt-1">
-                          {model.description}
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground mt-2">
-                Das ausgewählte Sprachmodell bestimmt die Fähigkeiten und
-                Charakteristiken des Chats.
-              </p>
-            </div>
+            {models && models.length > 0 && (
+              <div className="lg:col-span-3 col-span-full space-y-2">
+                <Select
+                  defaultValue="gemini-3.1-flash-lite-preview"
+                  value={watch('model')}
+                  onValueChange={value => setValue('model', value)}
+                >
+                  <SelectTrigger className="w-full h-[60px]">
+                    <SelectValue placeholder="Wählen Sie ein Sprachmodell" />
+                  </SelectTrigger>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[300px]">
+                    {models &&
+                      models.length > 0 &&
+                      models.map(model => (
+                        <SelectItem
+                          key={model.llm_model}
+                          value={model.llm_model}
+                          className="flex flex-col items-start py-3"
+                        >
+                          <div className="flex flex-col justify-start items-start">
+                            <div className="font-medium text-base text-left">
+                              {model.name} ({model.llm_hoster})
+                            </div>
+                            <div className="text-sm text-muted-foreground leading-snug text-left mt-1">
+                              {model.description}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Das ausgewählte Sprachmodell bestimmt die Fähigkeiten und
+                  Charakteristiken des Chats.
+                </p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-4 items-center gap-4 mt-8">
             <Label htmlFor="temperature" className="text-right">

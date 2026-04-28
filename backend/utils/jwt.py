@@ -1,11 +1,14 @@
-import jwt
 import datetime
 import os
+
+import jwt
 from fastapi import HTTPException
-from dependencies import logger
+
+from backend.dependencies import logger
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 ALGORITHM = "HS256"
+
 
 def decode_jwt(token: str):
     """Decodes and verifies the JWT token.
@@ -48,7 +51,7 @@ def create_jwt(oid: str, name: str, last_name: str, email: str) -> str:
         "email": email,
         "userPrincipalName": email,
         "isDev": True,
-        "exp": expiration
+        "exp": expiration,
     }
 
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)

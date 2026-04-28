@@ -1,63 +1,85 @@
-from typing import TYPE_CHECKING, List, Optional, Dict
-from datetime import datetime
-from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy.ext.declarative import declarative_base
-from pydantic import BaseModel
 import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-Base = declarative_base()
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import Float, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from backend.models import Base
+from backend.models.chat_file import ChatFilePublic
 
 if TYPE_CHECKING:
     from models.chat_file import ChatFile
-    from models.favourite import Favourite
     from models.chat_message import ChatMessage
+    from models.favourite import Favourite
+
 
 class FileParams(BaseModel):
     queried: bool
     query_type: str
 
-class ChatBase(SQLModel):
-    title: str = Field(nullable=False, index=True)
-    description: str = Field(nullable=True, index=True)
-    context: str = Field(nullable=False)
 
-class Chat(ChatBase, Base, table=True):
+class Chat(Base):
     __tablename__ = "chats"
-    id: str = Field(primary_key=True, default=str(uuid.uuid4()))
-    created_at: datetime = Field(nullable=False, index=True, default=datetime.now())
-    updated_at: datetime = Field(nullable=False, index=True, default=datetime.now())
-    last_interacted_at: datetime = Field(nullable=False, index=True, default=datetime.now())
-    user_id: str = Field(nullable=False, index=True)
-    avatar_path: str = Field(nullable=False)
-    temperature: float = Field(nullable=False, index=True, default=0.75)
-    model: str = Field(nullable=False, index=True, default="llama3.1")
-    files: List["ChatFile"] = Relationship(back_populates="chat", sa_relationship_kwargs={"cascade": "all, delete"})
-    favourite: "Favourite" = Relationship(back_populates="chat", sa_relationship_kwargs={"cascade": "all, delete"})
-    messages: List["ChatMessage"] = Relationship(back_populates="chat", sa_relationship_kwargs={"cascade": "all, delete"})
 
-class ChatPublic(ChatBase):
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    context: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, index=True, default=datetime.now)
+    last_interacted_at: Mapped[datetime] = mapped_column(nullable=False, index=True, default=datetime.now)
+    user_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    avatar_path: Mapped[str] = mapped_column(String, nullable=False)
+    temperature: Mapped[float] = mapped_column(Float, nullable=False, index=True, default=0.75)
+    model: Mapped[str] = mapped_column(String, nullable=False, index=True, default="llama3.1")
+    model_provider: Mapped[str] = mapped_column(String, nullable=False, index=True, default="GOOGLE_GENAI")
+
+    files: Mapped[list["ChatFile"]] = relationship("ChatFile", back_populates="chat", cascade="all, delete")
+    favourite: Mapped["Favourite"] = relationship("Favourite", back_populates="chat", cascade="all, delete")
+    messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="chat", cascade="all, delete")
+
+
+class ChatPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
+    title: str
+    description: str | None
+    context: str
     user_id: str
     created_at: datetime
     updated_at: datetime
-    files: list["ChatFile"]
+    last_interacted_at: datetime
+    avatar_path: str
+    temperature: float
+    model: str
+    model_provider: str
+    files: list[ChatFilePublic] = Field(default_factory=list)
+
 
 class ChatCreate(BaseModel):
     title: str
     temperature: float
-    description: Optional[str]
+    description: str | None
     context: str
+    model_provider: str = "GOOGLE_GENAI"
+
 
 class ChatUpdate(BaseModel):
     title: str
     temperature: float
-    description: Optional[str]
+    description: str | None
     context: str
-    
+    model_provider: str = "GOOGLE_GENAI"
+
+
 class ChatParams(BaseModel):
     use_websearch: bool
     use_link_scraping: bool
-    files: Optional[Dict[str, FileParams]] = {}
+    files: dict[str, FileParams] | None = {}
+
 
 class ChatQuery(BaseModel):
     text: str

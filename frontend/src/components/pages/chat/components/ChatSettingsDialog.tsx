@@ -75,8 +75,10 @@ export default function ChatSettingsDialog({
             className="bg-primary dark:bg-background dark:border
                     text-primary-foreground hover:bg-primary/50 p-4 rounded-sm border-white border dark:border-white"
           >
-            <DialogTrigger>
-              <Settings className="h-4 w-4" />
+            <DialogTrigger asChild>
+              <button>
+                <Settings className="h-4 w-4" />
+              </button>
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent className="dark:bg-accent border border-white bg-primary shadow-sm">

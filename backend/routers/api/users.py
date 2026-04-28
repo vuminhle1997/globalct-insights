@@ -1,18 +1,15 @@
+import re
 import uuid
 
+import bcrypt
+from fastapi import Depends, Response
 from redis import Redis
 from sqlmodel import Session
-from routers.custom_router import APIRouter
-from fastapi import Depends, Response
 
-from dependencies import get_db_session, get_redis_client, logger
-from models.user import UserLogin
-from utils import create_jwt
-from models import UserCreate, User
-from typing import List
-
-import bcrypt
-import re
+from backend.dependencies import get_db_session, get_redis_client, logger
+from backend.models.user import User, UserCreate, UserLogin
+from backend.routers.custom_router import APIRouter
+from backend.utils.jwt import create_jwt
 
 email_pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
 
@@ -22,9 +19,13 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.post("/")
-async def create_user(user: UserCreate, db_client: Session = Depends(get_db_session),
-                      redis_client: Redis = Depends(get_redis_client)):
+async def create_user(
+    user: UserCreate,
+    db_client: Session = Depends(get_db_session),
+    redis_client: Redis = Depends(get_redis_client),
+):
     """
     Create a new user and handle session management.
 
@@ -52,13 +53,13 @@ async def create_user(user: UserCreate, db_client: Session = Depends(get_db_sess
         return Response("Email is not valid.", status_code=401)
     if user.password != user.confirm_password:
         return Response("Password is not matching.", status_code=401)
-    hashed_password = bcrypt.hashpw(user.password.encode('utf8'), bcrypt.gensalt(12))
+    hashed_password = bcrypt.hashpw(user.password.encode("utf8"), bcrypt.gensalt(12))
     db_user = User(
         id=str(uuid.uuid4()),
         name=user.name,
         last_name=user.last_name,
         email=user.email,
-        hashed_password=hashed_password.decode('utf8'),
+        hashed_password=hashed_password.decode("utf8"),
     )
 
     try:
@@ -68,16 +69,20 @@ async def create_user(user: UserCreate, db_client: Session = Depends(get_db_sess
         session_id = str(uuid.uuid4())
         jwt_token = create_jwt(oid=db_user.id, name=user.name, last_name=user.last_name, email=user.email)
         redis_client.setex(f"session:{session_id}", 3600, jwt_token)
-        response = Response('Login successful.', status_code=200)
-        response.set_cookie("session_id", session_id, httponly=False, secure=False) # set on True when Production
+        response = Response("Login successful.", status_code=200)
+        response.set_cookie("session_id", session_id, httponly=False, secure=False)  # set on True when Production
         return response
     except Exception as e:
         logger.error(e)
         return Response(e, status_code=500)
 
+
 @router.post("/login/")
-async def login_user(user: UserLogin, db_client: Session = Depends(get_db_session),
-                     redis_client: Redis = Depends(get_redis_client)):
+async def login_user(
+    user: UserLogin,
+    db_client: Session = Depends(get_db_session),
+    redis_client: Redis = Depends(get_redis_client),
+):
     """
     Handles user login requests.
 
@@ -92,7 +97,7 @@ async def login_user(user: UserLogin, db_client: Session = Depends(get_db_sessio
         redis_client (Redis): The Redis client dependency.
 
     Returns:
-        Response: 
+        Response:
             - 200: Login successful. Sets a session cookie and returns a success message.
             - 401: Invalid email, missing password, or incorrect password.
             - 404: User not found in the database.
@@ -106,18 +111,24 @@ async def login_user(user: UserLogin, db_client: Session = Depends(get_db_sessio
     if not user.password:
         return Response("Password is missing.", status_code=401)
     try:
-        db_user: List[User] | None = (db_client
-             .query(User).filter(User.email.like(f"%{user.email}%")).all())
+        db_user: list[User] | None = db_client.query(User).filter(User.email.like(f"%{user.email}%")).all()
 
         if db_user and len(db_user) > 0:
             db_user: User = db_user[0]
             is_matching = bcrypt.checkpw(user.password.encode(), db_user.hashed_password.encode())
             if is_matching:
                 session_id = str(uuid.uuid4())
-                jwt_token = create_jwt(oid=db_user.id, name=db_user.name, last_name=db_user.last_name, email=db_user.email)
+                jwt_token = create_jwt(
+                    oid=db_user.id,
+                    name=db_user.name,
+                    last_name=db_user.last_name,
+                    email=db_user.email,
+                )
                 redis_client.setex(f"session:{session_id}", 3600, jwt_token)
-                response = Response('Login successful.', status_code=200)
-                response.set_cookie("session_id", session_id, httponly=False, secure=False) # set on True when Production
+                response = Response("Login successful.", status_code=200)
+                response.set_cookie(
+                    "session_id", session_id, httponly=False, secure=False
+                )  # set on True when Production
                 return response
             else:
                 return Response("Password wrong.", status_code=401)
