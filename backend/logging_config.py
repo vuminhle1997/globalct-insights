@@ -17,8 +17,11 @@ def setup_logging():
     Returns:
         logging.Logger: Configured logger for the application.
     """
-    logs_dir = Path("logs")
-    logs_dir.mkdir(exist_ok=True)
+    base_dir = Path(__file__).resolve().parent.parent
+
+    # Define logs directory relative to the project root
+    logs_dir = base_dir / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
     # Get current date for log file names
     current_date = datetime.now().strftime("%Y_%m_%d")

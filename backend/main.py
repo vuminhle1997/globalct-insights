@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -17,9 +18,42 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
-from backend.dependencies import base_url, create_db_and_tables, get_redis_client, logger
+from backend.dependencies import base_url, get_redis_client, logger
 from backend.routers.route import router
 from backend.utils.jwt import decode_jwt
+
+
+def check_required_env_vars():
+    import sys
+
+    required_vars = [
+        "CLIENT_ID",
+        "CLIENT_SECRET",
+        "TENANT_ID",
+        "REDIRECT_URI",
+        "FRONTEND_URL",
+        "ALLOWED_GROUPS_IDS",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "DATABASE_URL",
+        "PG_HOST",
+        "PG_PORT",
+        "PG_USER",
+        "PG_PASSWORD",
+        "PG_COLLECTION",
+        "MYSQL_HOST",
+        "MYSQL_PORT",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "CHROMA_HOST",
+        "CHROMA_PORT",
+        "PHOENIX_API_KEY",
+        "PHOENIX_COLLECTOR_ENDPOINT",
+    ]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    if missing_vars:
+        logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+        sys.exit(1)
 
 
 def _is_endpoint_reachable(url: str, timeout: float = 1.0) -> bool:
@@ -51,10 +85,15 @@ try:
 except Exception as e:
     logger.error(f"Startup error: {e}")
 
-# Create dir uploads/avatars if it doesn't exist
-if not os.path.exists("uploads/avatars"):
-    os.makedirs("uploads/avatars")
-    logger.info("Created directory uploads/avatars")
+
+base_dir = Path(__file__).resolve().parent
+uploads_dir = base_dir / "uploads" / "avatars"
+
+if not uploads_dir.exists():
+    # parents=True ensures 'uploads' is created if it doesn't exist
+    # exist_ok=True prevents errors if another process creates it simultaneously
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Created directory: {uploads_dir}")
 
 # Settings global
 provider = os.getenv("LLM_PROVIDER", "OLLAMA")
@@ -129,13 +168,19 @@ SCOPES = ["User.Read"]
 REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:4000/redirect")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-origins = [
-    "http://localhost",
-    "http://localhost:3000",  # Default Next.js dev server
-    "http://localhost:4000",  # Make sure this is included
-    "http://localhost:5173",
-    FRONTEND_URL,
-]
+ENV = os.getenv("ENV", "development")
+if ENV == "production":
+    origins = [
+        FRONTEND_URL,
+    ]
+else:
+    origins = [
+        "http://localhost",
+        "http://localhost:3000",  # Default Next.js dev server
+        "http://localhost:4000",  # Make sure this is included
+        "http://localhost:5173",
+        FRONTEND_URL,
+    ]
 
 azure_app = ConfidentialClientApplication(CLIENT_ID, CLIENT_SECRET, AUTHORITY)
 
@@ -149,7 +194,6 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
-# app.mount("/uploads/avatars", StaticFiles(directory="uploads/avatars"), name="avatar")
 
 app.mount("/uploads/avatars", StaticFiles(directory="backend/uploads/avatars"), name="avatar")
 
@@ -175,13 +219,13 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
-def on_startup():
-    logger.debug(f"Redirect url: {REDIRECT_URI} \n FRONTEND_URL: {FRONTEND_URL}")
-    logger.debug("Creating tables for Database")
-    # NOTE: In production, use Alembic migrations (alembic upgrade head) instead of this.
-    # This is kept for development/testing convenience only.
-    create_db_and_tables()
+# @app.on_event("startup")
+# def on_startup():
+#     logger.debug(f"Redirect url: {REDIRECT_URI} \n FRONTEND_URL: {FRONTEND_URL}")
+#     logger.debug("Creating tables for Database")
+#     # NOTE: In production, use Alembic migrations (alembic upgrade head) instead of this.
+#     # This is kept for development/testing convenience only.
+#     create_db_and_tables()
 
 
 @app.get("/signin")

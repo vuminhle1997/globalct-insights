@@ -4,11 +4,13 @@ WORKDIR /app
 RUN corepack enable && corepack prepare yarn@stable --activate
 COPY package*.json ./
 COPY . .
-RUN yarn
-
-# Environment variables
 ARG NEXT_PUBLIC_BACKEND_URL=https://api.insights.globalct.com
 ARG NEXT_PUBLIC_APP_VERSION=1.0.0
+
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
+    NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
+
+RUN yarn
 
 RUN yarn build
 
@@ -18,6 +20,11 @@ WORKDIR /app
 
 ENV PORT=3000
 ENV NODE_ENV=production
+
+ARG NEXT_PUBLIC_BACKEND_URL=https://api.insights.globalct.com
+ARG NEXT_PUBLIC_APP_VERSION=1.0.0
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
+    NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # Install production dependencies
 RUN corepack enable && corepack prepare yarn@stable --activate

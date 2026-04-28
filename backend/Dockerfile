@@ -34,7 +34,8 @@ FROM python:3.12-slim-bookworm
 
 ENV POETRY_VERSION=2.1.4 \
     POETRY_VIRTUALENVS_CREATE=false \
-    POETRY_NO_INTERACTION=1
+    POETRY_NO_INTERACTION=1 \
+    PYTHONUNBUFFERED=1
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -56,23 +57,22 @@ RUN apt-get update \
 
 COPY --from=builder /opt/src/pgloader/build/bin/pgloader /usr/local/bin
 
-WORKDIR /var/app/backend
+WORKDIR /var/app
 
 COPY pyproject.toml poetry.lock ./
+COPY backend ./backend
 RUN poetry install --no-root --only main --no-ansi
 
-COPY . ./
 RUN mkdir -p /var/app/backend/uploads/avatars
 
 ARG PORT=4000
 
 LABEL maintainer="global CT Services & Consulting GmbH"
 
-ENV PYTHONPATH=/var/app/backend
+ENV PORT=${PORT} \
+    PYTHONPATH=/var/app
 
 EXPOSE ${PORT}
 
-# CMD uvicorn main:app --host 0.0.0.0 --port ${PORT}
-# CMD granian --interface asgi --host 0.0.0.0 --port ${PORT} main:app
-ENTRYPOINT [ "hypercorn", "main:app", "--bind", "0.0.0.0:${PORT}" ]
+CMD ["sh", "-c", "poetry run hypercorn backend.main:app --bind 0.0.0.0:${PORT}"]
 
