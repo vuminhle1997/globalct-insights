@@ -17,7 +17,7 @@ def setup_logging():
     Returns:
         logging.Logger: Configured logger for the application.
     """
-    base_dir = Path(__file__).resolve().parent.parent
+    base_dir = Path(__file__).resolve().parent
 
     # Define logs directory relative to the project root
     logs_dir = base_dir / "logs"
