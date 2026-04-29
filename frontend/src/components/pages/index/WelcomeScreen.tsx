@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Bars3Icon, PencilSquareIcon } from '@heroicons/react/24/solid';
@@ -36,9 +36,6 @@ export default function WelcomeScreen() {
   const isMobile = useIsMobile();
   const { open, toggleSidebar } = useSidebar();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const handleSideBarToggle = useCallback(() => {
-    toggleSidebar();
-  }, [toggleSidebar]);
 
   return (
     <main className="flex-1 overflow-hidden flex items-center justify-center">
@@ -48,7 +45,7 @@ export default function WelcomeScreen() {
             <Button
               variant="outline"
               className="bg-primary dark:bg-accent hover:bg-primary/50 text-white top-4 left-4 absolute"
-              onClick={() => handleSideBarToggle()}
+              onClick={toggleSidebar}
             >
               <Bars3Icon className="h-4 w-4" />
             </Button>

@@ -2,7 +2,6 @@
 
 import { Chat, Favourite } from '@/frontend/types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { marked } from 'marked';
 import { v4 } from 'uuid';
 import { Message } from '@/frontend/types';
 import { getMessages } from '@/frontend/queries/messages';
@@ -22,6 +21,8 @@ import {
 } from '@/components/ui/tooltip';
 import ThinkAnswerBlock from './components/ThinkAnswerBlock';
 import ReasoningIndicator from './components/ReasoningIndicator';
+import MessageBubble from './components/MessageBubble';
+import ChatSuggestions from './components/ChatSuggestions';
 
 export interface ChatContainerProps {
   chatContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -181,6 +182,10 @@ export default function ChatContainer({
     prevIsStreamingRef.current = isStreaming;
   }, [isStreaming, pendingMessage, response, scrollToBottom]);
 
+  const avatarSrc = chat.avatar_path
+    ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/uploads/avatars/${chat.avatar_path.split('/').pop()}`
+    : '/ai.jpeg';
+
   const chatSettingsProps: ChatSettingsDialogProps = {
     chat: chat!,
     deleteFavourite,
@@ -202,7 +207,7 @@ export default function ChatContainer({
             <Tooltip>
               <TooltipTrigger
                 className="bg-primary dark:bg-background hover:bg-primary/50 border border-white p-4 rounded-sm top-4 left-4"
-                onClick={() => handleSideBarToggle()}
+                onClick={handleSideBarToggle}
               >
                 <Bars3Icon className="h-4 w-4 text-white" />
               </TooltipTrigger>
@@ -217,102 +222,37 @@ export default function ChatContainer({
           <ChatSettingsDialog {...chatSettingsProps} />
         </div>
       </div>
-      {!chat.messages ||
-        (chat.messages.length === 0 && !isStreaming && (
-          <div className="flex flex-col items-center justify-center h-full min-h-[400px] space-y-8">
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-semibold text-gray-800 dark:text-white">
-                Willkommen im Chat!
-              </h2>
-              <p className="text-gray-600">
-                Ich bin hier, um Ihnen zu helfen. Stelle mir eine Frage!
-              </p>
-            </div>
-            <div className="space-y-4 w-full max-w-md">
-              <div
-                className="bg-background rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  if (messageText === '') {
-                    reset({ message: 'Hallo, wie heißen Sie?' });
-                  }
-                }}
-              >
-                <p className="text-gray-700 dark:text-white">
-                  👋 &quot;Hallo, wie heißen Sie?&quot;
-                </p>
-              </div>
-              <div
-                className="bg-background rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  if (messageText === '') {
-                    reset({
-                      message:
-                        'Welche Werkzeuge stehen zur Verfügung, um mein Problem zu lösen?',
-                    });
-                  }
-                }}
-              >
-                <p className="text-gray-700 dark:text-white">
-                  🛠️ &quot;Welche Werkzeuge stehen zur Verfügung, um mein
-                  Problem zu lösen?&quot;
-                </p>
-              </div>
-              <div
-                className="bg-background rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => {
-                  if (messageText === '') {
-                    reset({
-                      message: 'Wie können Sie mir bei meiner Aufgabe helfen?',
-                    });
-                  }
-                }}
-              >
-                <p className="text-gray-700 dark:text-white">
-                  💡 &quot;Wie können Sie mir bei meiner Aufgabe helfen?&quot;
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
+
+      {(!chat.messages || chat.messages.length === 0) && !isStreaming && (
+        <ChatSuggestions
+          messageText={messageText}
+          onSelect={text => reset({ message: text })}
+        />
+      )}
+
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 flex flex-col-reverse">
-        {/**
-         * This scope is the writing indicator.
-         */}
+        {/* Reasoning indicator while streaming */}
         {isStreaming && <ReasoningIndicator />}
 
-        {/**
-         * This scope consists of:
-         * - Assistant Response streamed
-         * - Pending Message that is sent by the user
-         * - and indicator
-         */}
-        {/* Assistant Response */}
+        {/* Live assistant response */}
         {isStreaming && response.length > 0 && (
           <div className="flex items-start space-x-4 my-4">
             <Image
-              src={
-                chat.avatar_path
-                  ? `${
-                      process.env.NEXT_PUBLIC_BACKEND_URL
-                    }/uploads/avatars/${chat.avatar_path.split('/').pop()}`
-                  : '/ai.jpeg'
-              }
+              src={avatarSrc}
               alt="The AI assistant's avatar typing indicator"
-              className="flex-shrink-0 w-12 h-12 rounded-full bg-background flex items-center justify-center object-cover"
+              className="flex-shrink-0 w-12 h-12 rounded-full bg-background object-cover"
               width={40}
               height={40}
             />
-            <div
-              className={`flex-1 rounded-lg shadow-sm p-4 bg-background dark:prose-invert dark:[&_strong]:text-white py-0`}
-            >
-              {
-                <div className={'text-gray-800 dark:text-white'}>
-                  {response && <ThinkAnswerBlock response={response} />}
-                </div>
-              }
+            <div className="flex-1 rounded-lg shadow-sm p-4 bg-background dark:prose-invert dark:[&_strong]:text-white py-0">
+              <div className="text-foreground">
+                <ThinkAnswerBlock response={response} />
+              </div>
             </div>
           </div>
         )}
+
+        {/* Pending user message while streaming */}
         {isStreaming && pendingMessage && (
           <div className="flex items-start space-x-4 justify-end my-4">
             <div className="flex-1 bg-background rounded-lg shadow-sm p-4">
@@ -320,167 +260,42 @@ export default function ChatContainer({
                 dangerouslySetInnerHTML={{
                   __html: pendingMessage.replaceAll('\n', '<br />'),
                 }}
-              ></div>
+              />
             </div>
-
             <Image
-              src={profilePicture ? profilePicture : '/ai.jpeg'}
+              src={profilePicture ?? '/ai.jpeg'}
               alt="User Profile Picture"
-              className="flex-shrink-0 w-12 h-12 rounded-full bg-background flex items-center justify-center object-cover"
+              className="flex-shrink-0 w-12 h-12 rounded-full bg-background object-cover"
               width={40}
               height={40}
             />
           </div>
         )}
 
-        {/**
-         * Consists of messages:
-         * - user submitted messages
-         * - assistant responses after submissions
-         */}
-        {submittedMessages.map(message => {
-          return (
-            <div
-              key={message.id}
-              className={`flex items-start gap-4 w-full mb-4 ${
-                message.role === 'user' ? 'justify-end' : ''
-              }`}
-            >
-              {message.role !== 'user' && (
-                <>
-                  {message.role === 'assistant' ? (
-                    <Image
-                      src={
-                        chat.avatar_path
-                          ? `${
-                              process.env.NEXT_PUBLIC_BACKEND_URL
-                            }/uploads/avatars/${chat.avatar_path.split('/').pop()}`
-                          : '/ai.jpeg'
-                      }
-                      alt="The avatar of the AI assistant chat partner"
-                      className="flex-shrink-0 w-12 h-12 rounded-full bg-background flex items-center justify-center object-cover"
-                      width={40}
-                      height={40}
-                    />
-                  ) : (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-background flex items-center justify-center ">
-                      S
-                    </div>
-                  )}
-                </>
-              )}
-              <div
-                className={`flex-1 rounded-lg shadow-sm p-4 ${
-                  message.role === 'user'
-                    ? 'bg-background'
-                    : 'bg-background dark:prose-invert dark:[&_strong]:text-white  py-0'
-                }`}
-              >
-                <div
-                  className={
-                    message.role === 'user'
-                      ? ''
-                      : 'text-gray-800 dark:text-white'
-                  }
-                >
-                  {message.role === 'user' ? (
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: marked(message.text.replaceAll('\n', '<br />')),
-                      }}
-                    ></div>
-                  ) : (
-                    <ThinkAnswerBlock response={message.text} />
-                  )}
-                </div>
-              </div>
-              {message.role === 'user' && (
-                <Image
-                  src={profilePicture ? profilePicture : '/ai.jpeg'}
-                  alt="User Profile Picture"
-                  className="flex-shrink-0 w-12 h-12 rounded-full bg-background flex items-center justify-center object-cover"
-                  width={40}
-                  height={40}
-                />
-              )}
-            </div>
-          );
-        })}
+        {/* Optimistically added messages (submitted this session) */}
+        {submittedMessages.map(message => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            avatarSrc={avatarSrc}
+            profilePicture={profilePicture}
+          />
+        ))}
 
+        {/* Paginated historical messages */}
         {messagesFetched && messagesFetched.pages[0].items.length > 0 && (
           <>
             {messagesFetched.pages.map(page =>
               page.items.map((message, index) => {
-                const isLastPage = page.items.length === index + 1;
+                const isLastItem = page.items.length === index + 1;
                 return (
-                  <div
+                  <MessageBubble
                     key={message.id}
-                    className={`flex items-start gap-4 w-full mb-4 ${
-                      message.role === 'user' ? 'justify-end' : ''
-                    }`}
-                    ref={isLastPage ? ref : null}
-                  >
-                    {message.role !== 'user' && (
-                      <>
-                        {message.role === 'assistant' ? (
-                          <Image
-                            src={
-                              chat.avatar_path
-                                ? `${
-                                    process.env.NEXT_PUBLIC_BACKEND_URL
-                                  }/uploads/avatars/${chat.avatar_path.split('/').pop()}`
-                                : '/ai.jpeg'
-                            }
-                            alt="The avatar of the AI assistant chat partner"
-                            className="flex-shrink-0 w-12 h-12 rounded-full bg-background flex items-center justify-center object-cover"
-                            width={40}
-                            height={40}
-                          />
-                        ) : (
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-background flex items-center justify-center ">
-                            S
-                          </div>
-                        )}
-                      </>
-                    )}
-                    <div
-                      className={`flex-1 rounded-lg shadow-sm p-4 ${
-                        message.role === 'user'
-                          ? 'bg-background'
-                          : 'bg-background prose py-0'
-                      }`}
-                    >
-                      <div
-                        className={
-                          message.role === 'user'
-                            ? ''
-                            : 'text-gray-800 dark:text-white'
-                        }
-                      >
-                        {message.text &&
-                          (message.role === 'user' ? (
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: marked(
-                                  message.text.replaceAll('\n', '<br />')
-                                ),
-                              }}
-                            ></div>
-                          ) : (
-                            <ThinkAnswerBlock response={message.text} />
-                          ))}
-                      </div>
-                    </div>
-                    {message.role === 'user' && (
-                      <Image
-                        src={profilePicture ? profilePicture : '/ai.jpeg'}
-                        alt="User Profile Picture"
-                        className="flex-shrink-0 w-12 h-12 rounded-full bg-background flex items-center justify-center object-cover"
-                        width={40}
-                        height={40}
-                      />
-                    )}
-                  </div>
+                    message={message}
+                    avatarSrc={avatarSrc}
+                    profilePicture={profilePicture}
+                    observerRef={isLastItem ? ref : undefined}
+                  />
                 );
               })
             )}

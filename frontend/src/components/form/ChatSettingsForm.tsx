@@ -9,6 +9,7 @@ import {
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
+import Image from 'next/image';
 
 import { Slider } from '../ui/slider';
 import {
@@ -31,19 +32,10 @@ import {
 import { Chat } from '@/frontend/types';
 import { RefObject } from 'react';
 import { selectLLMModels, useAppSelector } from '@/frontend';
-
-type FormData = {
-  title: string;
-  description: string;
-  context: string;
-  avatar?: FileList;
-  temperature: number;
-  model: string;
-  model_provider: string;
-};
+import { type ChatEntryFormData as FormData } from './ChatEntryForm';
 
 export interface ChatSettingsFormProps {
-  handleSubmit: UseFormHandleSubmit<FormData, FormData>;
+  handleSubmit: UseFormHandleSubmit<FormData>;
   onSubmit: (data: FormData) => Promise<void>;
   register: UseFormRegister<FormData>;
   watch: UseFormWatch<FormData>;
@@ -130,16 +122,17 @@ export default function ChatSettingsForm({
                   onClick={handleAvatarClick}
                   className={`w-60 h-60 rounded-full overflow-hidden cursor-pointer relative group ${
                     !avatarPreview
-                      ? 'border-2 border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
+                      ? 'border-2 border-dashed border-input hover:border-muted-foreground bg-muted'
                       : ''
                   }`}
                 >
                   {avatarPreview ? (
                     <>
-                      <img
+                      <Image
                         src={avatarPreview}
                         alt="Avatar preview"
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="text-white text-sm">Ändern</span>
@@ -149,7 +142,7 @@ export default function ChatSettingsForm({
                     <div className="flex flex-col items-center justify-center h-full p-4">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-8 w-8 text-gray-400"
+                        className="h-8 w-8 text-muted-foreground"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -161,7 +154,7 @@ export default function ChatSettingsForm({
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                         />
                       </svg>
-                      <span className="text-sm text-gray-500 text-center mt-2">
+                      <span className="text-sm text-muted-foreground text-center mt-2">
                         Avatar hochladen
                       </span>
                     </div>

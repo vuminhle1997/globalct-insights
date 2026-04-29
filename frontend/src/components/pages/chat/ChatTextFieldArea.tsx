@@ -109,7 +109,7 @@ export default function ChatTextFieldArea({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 title="Datei hochladen"
                 onClick={handleUploadClick}
                 disabled={
@@ -129,7 +129,7 @@ export default function ChatTextFieldArea({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 title="Dateien verwalten"
                 onClick={() => setIsFileDialogOpen(true)}
                 disabled={
@@ -145,7 +145,7 @@ export default function ChatTextFieldArea({
                 type="submit"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 title="Nachricht senden"
                 disabled={!messageText?.trim() || isSubmitting || isTyping}
               >

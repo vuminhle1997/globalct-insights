@@ -3,7 +3,8 @@ import React from 'react';
 
 import { DialogTrigger } from '../ui/dialog';
 
-import { Link, TrashIcon } from 'lucide-react';
+import { TrashIcon } from 'lucide-react';
+import Link from 'next/link';
 import { Dialog } from '../ui/dialog';
 import { SidebarMenuButton } from '../ui/sidebar';
 import { TooltipContent, TooltipTrigger } from '../ui/tooltip';

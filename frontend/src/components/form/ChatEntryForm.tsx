@@ -8,6 +8,8 @@ import {
 } from '../ui/dialog';
 import { usePostChat, useUpdateChat } from '@/frontend/queries/chats';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Chat } from '@/frontend/types';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -37,22 +39,27 @@ import {
   HeartIcon,
 } from '@heroicons/react/24/solid';
 
-type FormData = {
-  title: string;
-  description: string;
-  context: string;
-  avatar?: FileList;
-  temperature: number;
-  model: string;
-  model_provider: string;
-};
+export const chatFormSchema = z.object({
+  title: z.string().min(1, 'Titel ist erforderlich'),
+  description: z.string().optional(),
+  context: z.string().min(1, 'Kontext ist erforderlich'),
+  avatar: z.any().optional(),
+  temperature: z.number().min(0).max(1),
+  model: z.string().min(1, 'Bitte wählen Sie ein Sprachmodell'),
+  model_provider: z.string(),
+});
+
+export type ChatEntryFormData = z.infer<typeof chatFormSchema>;
+
+/** Internal alias kept for readability within this file */
+type FormData = ChatEntryFormData;
 
 interface ChatEntryFormProps {
   chat?: Chat;
   onSuccess?: () => void;
   mode?: 'create' | 'update';
-  onCreated?: (chat: Chat) => void; // called only when a new chat is created
-  onUpdated?: (chat: Chat) => void; // called only when an existing chat is updated
+  onCreated?: (chat: Chat) => void;
+  onUpdated?: (chat: Chat) => void;
 }
 
 /**
@@ -112,6 +119,7 @@ export default function ChatEntryForm({
     getValues,
     formState: { errors },
   } = useForm<FormData>({
+    resolver: zodResolver(chatFormSchema),
     defaultValues: chat
       ? {
           title: chat.title,
@@ -125,6 +133,7 @@ export default function ChatEntryForm({
       : {
           model: 'gemini-3.1-flash-lite-preview',
           model_provider: 'GOOGLE_GENAI',
+          temperature: 0.75,
         },
   });
   const [showError, setShowError] = useState(false);
