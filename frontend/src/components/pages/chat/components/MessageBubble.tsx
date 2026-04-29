@@ -45,8 +45,8 @@ export default function MessageBubble({
               src={avatarSrc}
               alt="The avatar of the AI assistant chat partner"
               className="flex-shrink-0 w-12 h-12 rounded-full bg-background object-cover"
-              width={40}
-              height={40}
+              width={48}
+              height={48}
             />
           ) : (
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-background flex items-center justify-center">
@@ -82,8 +82,8 @@ export default function MessageBubble({
           src={profilePicture ?? '/ai.jpeg'}
           alt="User Profile Picture"
           className="flex-shrink-0 w-12 h-12 rounded-full bg-background object-cover"
-          width={40}
-          height={40}
+          width={48}
+          height={48}
         />
       )}
     </div>
