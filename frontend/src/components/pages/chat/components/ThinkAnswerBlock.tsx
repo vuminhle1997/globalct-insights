@@ -75,7 +75,7 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
               <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-500 dark:text-yellow-100 p-4 rounded">
                 <p className="font-semibold mb-1">🧠 Gedanke</p>
                 <div
-                  className="prose prose-sm sm:prose dark:prose-invert whitespace-pre-line max-w-none"
+                  className="prose dark:prose-invert whitespace-pre-line w-full max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: marked(block.content),
                   }}
@@ -95,7 +95,7 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
                   🔎 Beobachtung
                 </p>
                 <div
-                  className="prose prose-sm sm:prose dark:prose-invert max-w-none"
+                  className="prose dark:prose-invert w-full max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: marked(block.content),
                   }}
@@ -115,7 +115,7 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
                   ✅ Antwort
                 </p>
                 <div
-                  className="prose prose-sm sm:prose dark:prose-invert max-w-none"
+                  className="prose dark:prose-invert w-full max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: marked(block.content),
                   }}

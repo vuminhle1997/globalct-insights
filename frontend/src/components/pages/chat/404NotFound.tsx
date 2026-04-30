@@ -2,7 +2,6 @@
 
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import React from 'react';
 
 /**
  * A React functional component that displays a "Chat not found" screen.

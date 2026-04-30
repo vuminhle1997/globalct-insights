@@ -5,6 +5,7 @@ import { marked } from 'marked';
 import { cn } from '@/lib/utils';
 import ThinkAnswerBlock from './ThinkAnswerBlock';
 import { Message } from '@/frontend/types';
+import { motion } from 'framer-motion';
 
 export interface MessageBubbleProps {
   message: Message;
@@ -31,12 +32,15 @@ export default function MessageBubble({
   const isUser = message.role === 'user';
 
   return (
-    <div
+    <motion.div
       ref={observerRef}
       className={cn(
-        'flex items-start gap-4 w-full mb-4',
+        'flex justify-start gap-4 w-full mb-4',
         isUser && 'justify-end'
       )}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
     >
       {!isUser && (
         <>
@@ -44,12 +48,12 @@ export default function MessageBubble({
             <Image
               src={avatarSrc}
               alt="The avatar of the AI assistant chat partner"
-              className="flex-shrink-0 w-12 h-12 rounded-full bg-background object-cover"
+              className="w-12 h-12 rounded-full bg-background object-cover"
               width={48}
               height={48}
             />
           ) : (
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-background flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-background flex items-center justify-center">
               S
             </div>
           )}
@@ -59,9 +63,7 @@ export default function MessageBubble({
       <div
         className={cn(
           'flex-1 rounded-lg shadow-sm p-4',
-          isUser
-            ? 'bg-background'
-            : 'bg-background prose py-0 dark:prose-invert dark:[&_strong]:text-white'
+          isUser ? 'bg-background' : 'bg-background '
         )}
       >
         <div className={cn(!isUser && 'text-foreground')}>
@@ -72,7 +74,11 @@ export default function MessageBubble({
               }}
             />
           ) : (
-            <ThinkAnswerBlock response={message.text} />
+            <div className="flex-1 rounded-lg">
+              <div className="py-0 dark:prose-invert dark:[&_strong]:text-white">
+                <ThinkAnswerBlock response={message.text} />
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -81,11 +87,11 @@ export default function MessageBubble({
         <Image
           src={profilePicture ?? '/ai.jpeg'}
           alt="User Profile Picture"
-          className="flex-shrink-0 w-12 h-12 rounded-full bg-background object-cover"
+          className="shrink-0 w-12 h-12 rounded-full bg-background object-cover"
           width={48}
           height={48}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

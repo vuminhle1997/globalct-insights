@@ -230,13 +230,13 @@ export default function ChatContainer({
         />
       )}
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 flex flex-col-reverse">
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6 flex flex-col-reverse">
         {/* Reasoning indicator while streaming */}
         {isStreaming && <ReasoningIndicator />}
 
         {/* Live assistant response */}
         {isStreaming && response.length > 0 && (
-          <div className="flex items-start space-x-4 my-4">
+          <div className="flex space-x-4 my-4">
             <Image
               src={avatarSrc}
               alt="The AI assistant's avatar typing indicator"
@@ -244,7 +244,7 @@ export default function ChatContainer({
               width={40}
               height={40}
             />
-            <div className="flex-1 rounded-lg shadow-sm p-4 bg-background dark:prose-invert dark:[&_strong]:text-white py-0">
+            <div className="rounded-lg shadow-sm p-4 bg-background dark:prose-invert dark:[&_strong]:text-white py-0">
               <div className="text-foreground">
                 <ThinkAnswerBlock response={response} />
               </div>
@@ -254,8 +254,8 @@ export default function ChatContainer({
 
         {/* Pending user message while streaming */}
         {isStreaming && pendingMessage && (
-          <div className="flex items-start space-x-4 justify-end my-4">
-            <div className="flex-1 bg-background rounded-lg shadow-sm p-4">
+          <div className="flex space-x-4 justify-end my-4">
+            <div className="bg-background rounded-lg shadow-sm p-4">
               <div
                 dangerouslySetInnerHTML={{
                   __html: pendingMessage.replaceAll('\n', '<br />'),
