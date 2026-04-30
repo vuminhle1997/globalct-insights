@@ -49,10 +49,10 @@ export const chatFormSchema = z.object({
   model_provider: z.string(),
 });
 
-export type ChatDialogFornData = z.infer<typeof chatFormSchema>;
+export type ChatDialogFormData = z.infer<typeof chatFormSchema>;
 
 /** Internal alias kept for readability within this file */
-type FormData = ChatDialogFornData;
+type FormData = ChatDialogFormData;
 
 interface ChatFormDialogProps {
   chat?: Chat;

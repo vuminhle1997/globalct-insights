@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Bars3Icon, PencilSquareIcon } from '@heroicons/react/24/solid';
-import ChatDialogForn from '@/components/form/ChatFormDialog';
+import ChatDialogForm from '@/components/form/ChatFormDialog';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -98,7 +98,7 @@ export default function WelcomeScreen() {
                     </p>
                   </TooltipContent>
                 </Tooltip>
-                <ChatDialogForn onCreated={() => setIsCreateOpen(false)} />
+                <ChatDialogForm onCreated={() => setIsCreateOpen(false)} />
               </Dialog>
             </TooltipProvider>
           </div>

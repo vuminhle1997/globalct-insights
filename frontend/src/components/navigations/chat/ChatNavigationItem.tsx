@@ -1,6 +1,6 @@
 'use client';
 
-import ChatDialogForn from '@/components/form/ChatFormDialog';
+import ChatDialogForm from '@/components/form/ChatFormDialog';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -109,7 +109,7 @@ export default function ChatNavigationItem({
           </DropdownMenuContent>
         </DropdownMenu>
         {selectedChat && (
-          <ChatDialogForn
+          <ChatDialogForm
             chat={selectedChat}
             onSuccess={() => {
               setIsDialogOpen(false);

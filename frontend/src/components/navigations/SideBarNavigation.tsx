@@ -14,7 +14,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import FooterNavigation from './FooterNavigation';
-import ChatDialogForn from '../form/ChatFormDialog';
+import ChatDialogForm from '../form/ChatFormDialog';
 import ChatsNavigation from './ChatsNavigation';
 import {
   selectAppState,
@@ -89,7 +89,7 @@ export default function SideBarNavigation() {
                         <p>Neuen Chat erstellen.</p>
                       </TooltipContent>
                     </Tooltip>
-                    <ChatDialogForn onCreated={() => setIsCreateOpen(false)} />
+                    <ChatDialogForm onCreated={() => setIsCreateOpen(false)} />
                   </Dialog>
                   <Tooltip>
                     <TooltipTrigger

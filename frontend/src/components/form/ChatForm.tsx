@@ -32,7 +32,7 @@ import {
 import { Chat } from '@/frontend/types';
 import { RefObject } from 'react';
 import { selectLLMModels, useAppSelector } from '@/frontend';
-import { type ChatDialogFornData as FormData } from './ChatFormDialog';
+import { type ChatDialogFormData as FormData } from './ChatFormDialog';
 
 export interface ChatSettingsFormProps {
   handleSubmit: UseFormHandleSubmit<FormData>;

@@ -1,6 +1,6 @@
 'use client';
 
-import ChatDialogForn from '@/components/form/ChatFormDialog';
+import ChatDialogForm from '@/components/form/ChatFormDialog';
 import { DialogHeader } from '@/components/ui/dialog';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import React from 'react';
@@ -37,7 +37,7 @@ export default function ChatEditAlertDialog({
         <DialogHeader>
           <DialogTitle>Chat bearbeiten</DialogTitle>
         </DialogHeader>
-        <ChatDialogForn
+        <ChatDialogForm
           chat={selectedChat || undefined}
           mode="update"
           onUpdated={chat => {

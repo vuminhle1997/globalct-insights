@@ -17,7 +17,7 @@ import { DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { DropdownMenuContent } from '../ui/dropdown-menu';
 import { DropdownMenuItem } from '../ui/dropdown-menu';
 import { PencilIcon } from '@heroicons/react/24/solid';
-import ChatDialogForn from '../form/ChatFormDialog';
+import ChatDialogForm from '../form/ChatFormDialog';
 import { useState } from 'react';
 import { useDeleteChat } from '@/frontend/queries/chats';
 import {
@@ -134,7 +134,7 @@ export const ChatNavigationItem = ({
             </DropdownMenuContent>
           </DropdownMenu>
           {selectedChat && (
-            <ChatDialogForn
+            <ChatDialogForm
               chat={selectedChat}
               onSuccess={() => {
                 setIsDialogOpen(false);
