@@ -144,7 +144,7 @@ def create_embed_model(
             api_base=ionos_base_url,
             api_key=api_key,
             default_headers=headers,
-            embed_batch_size=10,
+            embed_batch_size=16,
         )
 
     elif provider_upper == "OLLAMA":
@@ -161,7 +161,7 @@ def create_embed_model(
 
         return GoogleGenAIEmbedding(
             model_name=os.environ.get("GOOGLE_EMBED_MODEL", "gemini-embedding-001"),
-            embed_batch_size=10,
+            embed_batch_size=16,
             retries=10,
             timeout=_DEFAULT_REQUEST_TIMEOUT,
             verbose=True,

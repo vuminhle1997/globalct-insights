@@ -68,4 +68,4 @@ GOOGLE_MODEL: str = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")
 
 # LLM settings
 CHUNK_SIZE: int = 512
-CHUNK_OVERLAP: int = 20
+CHUNK_OVERLAP: int = 50
