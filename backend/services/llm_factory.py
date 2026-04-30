@@ -66,7 +66,7 @@ def create_llm(
 
         ollama_host = os.getenv("OLLAMA_HOST", "localhost")
         ollama_port = os.getenv("OLLAMA_PORT", "11434")
-        ollama_base_url = base_url or f"{ollama_host}:{ollama_port}"
+        ollama_base_url = base_url or f"http://{ollama_host}:{ollama_port}"
         return Ollama(
             model=model or os.getenv("OLLAMA_MODEL", "llama3.1"),
             base_url=ollama_base_url,
@@ -137,7 +137,7 @@ def create_embed_model(
 
         ollama_host = os.getenv("OLLAMA_HOST", "localhost")
         ollama_port = os.getenv("OLLAMA_PORT", "11434")
-        ollama_base_url = base_url or f"{ollama_host}:{ollama_port}"
+        ollama_base_url = base_url or f"http://{ollama_host}:{ollama_port}"
         return OllamaEmbedding(
             model_name=os.getenv("OLLAMA_EMBED_MODEL", "mxbai-embed-large"),
             base_url=ollama_base_url,
