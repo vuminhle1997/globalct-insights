@@ -4,6 +4,18 @@ from dotenv import load_dotenv
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.llms import LLM
 
+from backend.core.config import (
+    GOOGLE_MODEL,
+    IONOS_API_KEY,
+    IONOS_BASE_URL,
+    IONOS_DEFAULT_EMBED_MODEL,
+    IONOS_DEFAULT_MODEL,
+    OLLAMA_EMBED_MODEL,
+    OLLAMA_HOST,
+    OLLAMA_MODEL,
+    OLLAMA_PORT,
+)
+
 load_dotenv()
 
 _DEFAULT_REQUEST_TIMEOUT = 420  # seconds — generous timeout for large-context LLM calls
@@ -37,15 +49,15 @@ def create_llm(
     Raises
     ------
     ValueError
-        If an unsupported provider string is given.
+        If an unsupported provider string is given, or a required API key is missing.
     """
     provider_upper = provider.upper()
 
     if provider_upper == "IONOS":
         from llama_index.llms.openai_like import OpenAILike
 
-        ionos_base_url = base_url or os.getenv("IONOS_BASE_URL", "http://localhost:11434")
-        api_key = os.getenv("IONOS_API_KEY", "")
+        ionos_base_url = base_url or IONOS_BASE_URL
+        api_key = IONOS_API_KEY
         if not api_key:
             raise ValueError("IONOS_API_KEY environment variable is required for the IONOS provider.")
         os.environ["OPENAI_API_BASE"] = ionos_base_url
@@ -57,7 +69,7 @@ def create_llm(
         return OpenAILike(
             api_base=ionos_base_url,
             temperature=temperature,
-            model=model or "meta-llama/Llama-3.3-70B-Instruct",
+            model=model or IONOS_DEFAULT_MODEL,
             is_chat_model=True,
             default_headers=headers,
             api_key=api_key,
@@ -68,11 +80,9 @@ def create_llm(
     elif provider_upper == "OLLAMA":
         from llama_index.llms.ollama import Ollama
 
-        ollama_host = os.getenv("OLLAMA_HOST", "localhost")
-        ollama_port = os.getenv("OLLAMA_PORT", "11434")
-        ollama_base_url = base_url or f"http://{ollama_host}:{ollama_port}"
+        ollama_base_url = base_url or f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
         return Ollama(
-            model=model or os.getenv("OLLAMA_MODEL", "llama3.1"),
+            model=model or OLLAMA_MODEL,
             base_url=ollama_base_url,
             temperature=temperature,
             request_timeout=_DEFAULT_REQUEST_TIMEOUT,
@@ -82,7 +92,7 @@ def create_llm(
         from llama_index.llms.google_genai import GoogleGenAI
 
         return GoogleGenAI(
-            model=model or os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
+            model=model or GOOGLE_MODEL,
             temperature=temperature,
         )
 
@@ -115,15 +125,15 @@ def create_embed_model(
     Raises
     ------
     ValueError
-        If an unsupported provider string is given.
+        If an unsupported provider string is given, or a required API key is missing.
     """
     provider_upper = provider.upper()
 
     if provider_upper == "IONOS":
         from llama_index.embeddings.openai import OpenAIEmbedding
 
-        ionos_base_url = base_url or os.getenv("IONOS_BASE_URL", "http://localhost:11434")
-        api_key = os.getenv("IONOS_API_KEY", "")
+        ionos_base_url = base_url or IONOS_BASE_URL
+        api_key = IONOS_API_KEY
         if not api_key:
             raise ValueError("IONOS_API_KEY environment variable is required for the IONOS provider.")
         headers = {
@@ -131,7 +141,7 @@ def create_embed_model(
             "Content-Type": "application/json",
         }
         return OpenAIEmbedding(
-            model_name="BAAI/bge-m3",
+            model_name=IONOS_DEFAULT_EMBED_MODEL,
             api_base=ionos_base_url,
             api_key=api_key,
             default_headers=headers,
@@ -141,11 +151,9 @@ def create_embed_model(
     elif provider_upper == "OLLAMA":
         from llama_index.embeddings.ollama import OllamaEmbedding
 
-        ollama_host = os.getenv("OLLAMA_HOST", "localhost")
-        ollama_port = os.getenv("OLLAMA_PORT", "11434")
-        ollama_base_url = base_url or f"http://{ollama_host}:{ollama_port}"
+        ollama_base_url = base_url or f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
         return OllamaEmbedding(
-            model_name=os.getenv("OLLAMA_EMBED_MODEL", "mxbai-embed-large"),
+            model_name=OLLAMA_EMBED_MODEL,
             base_url=ollama_base_url,
         )
 

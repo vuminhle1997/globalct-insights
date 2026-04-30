@@ -1,216 +1,336 @@
 # Backend
 
-The backend is a robust and scalable system designed to provide a REST API for interacting with Large Language Models (LLMs) and supporting Retrieval Augmented Generation (RAG) workflows. It integrates various services for data persistence, caching, and vector search, enabling seamless document retrieval and LLM-powered text generation. The backend is built using FastAPI and leverages several cutting-edge technologies to deliver high performance and flexibility.
+A FastAPI-based REST API that powers the GlobalCT Insights platform. It integrates Azure Entra ID for authentication, LlamaIndex for RAG pipelines, ChromaDB for vector search, Redis for session management, and PostgreSQL for relational data.
+
+---
+
+## Table of Contents
+
+1. [Features](#features)
+2. [Architecture Overview](#architecture-overview)
+3. [Project Structure](#project-structure)
+4. [Quickstart](#quickstart)
+5. [Environment Variables](#environment-variables)
+6. [Running the Server](#running-the-server)
+7. [Database Migrations](#database-migrations)
+8. [Running Tests](#running-tests)
+9. [Developer Guide](#developer-guide)
+10. [Required Services](#required-services)
+
+---
 
 ## Features
 
-- **FastAPI Framework**: Provides a high-performance REST API.
-- **LlamaIndex Integration**: Facilitates efficient document indexing and retrieval.
-- **Local LLMs with Ollama or via inference providers**: Supports local deployment of LLMs for text generation and embeddings.
-- **ChromaDB**: Serves as a vector database for semantic search and document retrieval.
-- **Redis**: Used for caching and session management.
-- **Azure Entra ID**: Enables secure authentication and authorization.
-- **Database Support**: Communicates with PostgreSQL and MySQL for data persistence.
-- **Opentelemetry and Arize Phoenix**: Provides tracing and observability for local LLM operations.
+- **FastAPI** — High-performance async REST API
+- **Azure Entra ID** — Secure authentication via OAuth2 / MSAL. No local passwords
+- **LlamaIndex** — Document indexing, RAG pipelines, and SQL-to-text queries
+- **ChromaDB** — Vector database for semantic document search
+- **Redis** — Session management (stores Azure access tokens)
+- **PostgreSQL** — Primary relational database
+- **MySQL** — Optional: import MySQL/MariaDB dumps and migrate them to PostgreSQL
+- **Arize Phoenix** — Tracing and observability for LLM operations
+- **Multiple LLM Providers** — IONOS, Ollama (local), Google GenAI
 
-## Architecture
+---
 
-The backend communicates with the following services:
+## Architecture Overview
 
-- **PostgreSQL**: Primary relational database for data storage.
-- **MySQL**: Used for migration and additional relational data needs.
-- **Redis**: Provides caching and session management.
-- **Ollama Service**: Handles LLM and embedding operations.
-- **ChromaDB Service**: Manages vector storage and retrieval for semantic search.
-
-## Updating dependencies
-
-If the dependencies in requirements.txt are out-dated, use this command to update the mandatory packages for the backend project:
-
-```bash
-pip install "fastapi[all]" \
-python-multipart \
-msal \
-dotenv \
-fastapi_pagination \
-hypercorn \
-sqlmodel \
-pydantic \
-openpyxl \
-alembic \
-sqlalchemy \
-llama-cloud-services \
-llama-index \
-llama-index-experimental \
-llama-index-llms-ollama \
-llama-index-embeddings-ollama \
-llama-index-llms-openai \
-llama-index-embeddings-openai \
-llama-index-llms-openai_like \
-llama-index-embeddings-openai_like \
-llama-index-vector-stores-chroma \
-llama-index-tools-duckduckgo \
-llama-index-readers-web \
-redis \
-mysql-connector-python \
-chromadb==1.0.4 \
-psycopg2-binary \
-markitdown \
-deepeval \
-pytest \
-arize-phoenix-otel \
-openinference-instrumentation-llama-index \
-opentelemetry-instrumentation-fastapi \
-pandas \
-numpy
+```
+frontend  ──HTTP──▶  FastAPI (backend/)
+                         │
+               ┌─────────┴─────────────────────┐
+               │                               │
+          routers/api/                   services/
+          ├─ auth.py          ────────▶  session_service.py
+          ├─ chats.py         ────────▶  chat_service.py
+          ├─ chat_inference.py ───────▶  llm_agent.py
+          ├─ favourites.py               llm_factory.py
+          ├─ messages.py                 indexer.py
+          ├─ models.py                   sql_dump_service.py
+          └─ avatar.py                   tasks.py (bg)
+                │                        rag/
+                │                        └─ pandas/, polars/
+                │
+           core/
+           ├─ config.py       (all env vars in one place)
+           └─ serializers.py  (shared dict helpers)
+                │
+          dependencies.py     (DB session, Redis, Chroma DI factories)
 ```
 
-For Windows:
-```powershell
-pip install "fastapi[all]" python-multipart msal dotenv fastapi_pagination hypercorn sqlmodel pydantic openpyxl alembic sqlalchemy llama-cloud-services llama-index llama-index-experimental llama-index-llms-ollama llama-index-embeddings-ollama llama-index-llms-openai llama-index-embeddings-openai llama-index-llms-openai_like llama-index-embeddings-openai_like llama-index-vector-stores-chroma llama-index-tools-duckduckgo llama-index-readers-web redis mysql-connector-python chromadb==1.0.4 psycopg2-binary markitdown deepeval pytest arize-phoenix-otel openinference-instrumentation-llama-index opentelemetry-instrumentation-fastapi pandas numpy
+**Authentication flow:** The user signs in via Azure → the access token is stored in Redis under a `session_id` cookie → every protected endpoint calls `verify_session_and_get_user_id` from `services/session_service.py` to decode the token and extract the Azure OID.
+
+---
+
+## Project Structure
+
+```
+backend/
+├── alembic/               # Database migration scripts
+├── core/
+│   ├── config.py          # Single source of truth for all environment variables
+│   └── serializers.py     # Shared dict serialization helpers
+├── dependencies.py        # FastAPI dependency injectors (DB, Redis, Chroma)
+├── logging_config.py      # Structured logging setup
+├── main.py                # App factory: CORS, routers, LLM init, Phoenix tracing
+├── models/                # SQLAlchemy / SQLModel ORM models
+│   ├── chat.py
+│   ├── chat_file.py
+│   ├── chat_message.py
+│   └── favourite.py
+├── routers/
+│   ├── api/
+│   │   ├── auth.py        # Azure sign-in, logout, /me, /profile-picture
+│   │   ├── avatar.py      # User avatar upload
+│   │   ├── chats.py       # Chat CRUD
+│   │   ├── chat_inference.py  # AI chat endpoints (streaming, file upload)
+│   │   ├── favourites.py  # Favourite chats
+│   │   ├── messages.py    # Chat message history
+│   │   └── models.py      # Available LLM model listing
+│   └── route.py           # Mounts all /api/* sub-routers
+├── services/
+│   ├── chat_service.py       # LLM resolution, tool building, history building
+│   ├── indexer.py            # Document/spreadsheet/SQL indexing into ChromaDB
+│   ├── llm_agent.py          # ReActAgent factory
+│   ├── llm_factory.py        # create_llm() / create_embed_model() — provider-agnostic
+│   ├── memory.py             # LlamaIndex chat memory helpers
+│   ├── rag/                  # Custom pandas/polars query engines (sandboxed eval)
+│   │   ├── pandas/
+│   │   └── polars/
+│   ├── session_service.py    # decode_jwt, verify_session_*, check_property_belongs_to_user
+│   ├── sql_dump_service.py   # SQL dump loading, MySQL→PG migration, DB utilities
+│   ├── tasks.py              # Background task: process SQL dump → index
+│   └── tools_initializer.py  # LlamaIndex tool factories (RAG, SQL, Pandas, URL, web)
+├── tests/                 # pytest test suite
+├── utils/
+│   └── __init__.py        # Backward-compat re-exports from session_service
+├── .env.example           # Template for all required environment variables
+├── Dockerfile
+├── alembic.ini
+├── pytest.ini
+└── requirements.txt
 ```
 
-## Setup Instructions
+---
 
-### 1. Create and Activate Virtual Environment
+## Quickstart
+
+### Prerequisites
+
+- Python 3.11+
+- [Poetry](https://python-poetry.org/) (recommended) _or_ pip
+- Running instances of: PostgreSQL, Redis, ChromaDB
+- An Azure Entra ID app registration (for auth)
+
+### 1. Clone and enter the backend directory
 
 ```bash
-python -m venv $PWD/venv
-source ./venv/bin/activate
+cd backend
 ```
 
-### 2. Install Dependencies
+### 2. Create and activate a virtual environment
 
-Install the required Python packages using the `requirements.txt` file:
-
+**With Poetry (recommended):**
 ```bash
+poetry install
+poetry shell
+```
+
+**With pip:**
+```bash
+python -m venv venv
+source venv/bin/activate          # macOS/Linux
+venv\Scripts\activate             # Windows
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
-
-Create a `.env` file by copying the provided `.env.example` file:
+### 3. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Edit the `.env` file to include your configuration. Example configuration:
+Edit `.env` and fill in your values. See [Environment Variables](#environment-variables) for the full reference.
+
+### 4. Run database migrations
+
+```bash
+poetry run alembic upgrade head
+# or: alembic upgrade head  (if already in the virtualenv)
+```
+
+### 5. Start the server
+
+```bash
+poetry run hypercorn main:app --bind 0.0.0.0:4000 --reload
+```
+
+The API will be available at `http://localhost:4000`.  
+Interactive API docs: `http://localhost:4000/docs`
+
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values:
 
 ```env
-# Azure Entra ID authentication
-CLIENT_ID=your_client_id
-CLIENT_SECRET=your_client_secret
-TENANT_ID=your_tenant_id
+# ── Azure Entra ID (required) ─────────────────────────────────────────────
+CLIENT_ID=<your Azure app client ID>
+CLIENT_SECRET=<your Azure app client secret>
+TENANT_ID=<your Azure tenant ID>
 REDIRECT_URI=http://localhost:4000/redirect
+FRONTEND_URL=http://localhost:3000
+ALLOWED_GROUPS_IDS=<comma-separated Azure group IDs allowed to access the app>
 
-# JWT for user and redis
-SECRET_KEY=<openssl rand -hex 32, necessary for generating SECRET>
+# ── App ───────────────────────────────────────────────────────────────────
+PORT=4000
+ENV=development          # development | production
 
-# Redis configuration
+# ── Redis (session storage) ───────────────────────────────────────────────
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# PostgreSQL configuration
-DATABASE_URL=postgresql://postgres:password@127.0.0.1:5432/llama-rag
+# ── PostgreSQL (primary database) ────────────────────────────────────────
+DATABASE_URL=postgresql://postgres:password@localhost:5432/llama-rag
 PG_HOST=localhost
 PG_PORT=5432
 PG_USER=postgres
 PG_PASSWORD=password
+PG_COLLECTION=llama-rag
 
-# MySQL configuration
+# ── MySQL (optional — only for SQL dump migration) ────────────────────────
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=password
 
-# ChromaDB configuration
-CHROMA_COLLECTION_NAME=llama-rage-TEST
+# ── ChromaDB (vector store) ───────────────────────────────────────────────
+CHROMA_HOST=localhost
+CHROMA_PORT=8000
+CHROMA_COLLECTION_NAME=llama-rag
 
-# Arize Phoenix Provider
-PHOENIX_API_KEY=<taken from the Phoenix Service API KEY Provider>
+# ── LLM provider (choose one) ─────────────────────────────────────────────
+LLM_PROVIDER=OLLAMA           # OLLAMA | IONOS | GOOGLE_GENAI
 
-# LLM communication
-LLM_PROVIDER=<IONOS|Ollama>
-IONOS_API_KEY=
+# Ollama (local)
+OLLAMA_HOST=localhost
+OLLAMA_PORT=11434
+OLLAMA_MODEL=llama3.1
+OLLAMA_EMBED_MODEL=mxbai-embed-large
+
+# IONOS Cloud Inference
+IONOS_API_KEY=<your IONOS API key>
 IONOS_BASE_URL=https://openai.inference.de-txl.ionos.com/v1
+
+# Google GenAI
+GOOGLE_API_KEY=<your Google API key>
+GOOGLE_MODEL=gemini-2.0-flash
+
+# ── Observability (optional) ──────────────────────────────────────────────
+PHOENIX_API_KEY=<your Arize Phoenix API key>
+PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006
 ```
 
-### 4. Start the FastAPI Server
+---
 
-Use Hypercorn as the ASGI server to start the FastAPI application:
+## Running the Server
 
 ```bash
-# granian --interface asgi --host 0.0.0.0 --port 4000 --reload --reload-ignore-dirs logs main:app
-hypercorn main:app --bind 0.0.0.0:{$PORT}
+# Development (auto-reload on file changes)
+poetry run hypercorn main:app --bind 0.0.0.0:4000 --reload
+
+# Production
+poetry run hypercorn main:app --bind 0.0.0.0:${PORT}
 ```
 
-This command starts the server with the following settings:
+---
 
-- **External Access**: Accessible via `0.0.0.0`.
-- **Port**: Runs on port `4000`.
+## Database Migrations
+
+The project uses **Alembic** for schema migrations.
+
+```bash
+# Apply all pending migrations
+poetry run alembic upgrade head
+
+# Create a new migration after changing a model
+poetry run alembic revision --autogenerate -m "add column foo to chat"
+
+# Review history
+poetry run alembic history
+
+# Roll back one revision
+poetry run alembic downgrade -1
+```
+
+> **Note:** In development you can use `create_db_and_tables()` (from `dependencies.py`) for a quick table setup, but always use Alembic in production to keep schema changes versioned and reproducible.
+
+---
+
+## Running Tests
+
+```bash
+poetry run pytest
+# or with coverage:
+poetry run pytest --cov=backend
+```
+
+---
+
+## Developer Guide
+
+### Adding a new API endpoint
+
+1. Create or extend a router file under `routers/api/`.
+2. Add business logic to the appropriate service in `services/` — keep routers thin (validation + HTTP concern only).
+3. Register the router in `routers/route.py` (or `main.py` for top-level routes like `/signin`).
+4. Add tests in `tests/`.
+
+### Adding a new LLM provider
+
+1. Add the provider's env vars to `core/config.py`.
+2. Add a new `elif provider_upper == "MY_PROVIDER":` branch in both `create_llm()` and `create_embed_model()` in `services/llm_factory.py`.
+3. Update `LLM_PROVIDER` in your `.env`.
+
+### Adding a new database model
+
+1. Define the model class in `models/` (inherit from `Base` / `SQLModel`).
+2. Generate and review the Alembic migration: `poetry run alembic revision --autogenerate -m "..."`.
+3. Add serializer helpers to `core/serializers.py` if the model is returned by API responses.
+
+### Session / auth pattern
+
+Every protected endpoint should call one of these (imported from `services/session_service`):
+
+```python
+from backend.services.session_service import verify_session_and_get_user_id
+
+user_id, session_id = verify_session_and_get_user_id(request, redis_client)
+```
+
+To also verify ownership of a resource (e.g., a `Chat`):
+
+```python
+from backend.services.session_service import check_property_belongs_to_user
+
+belongs, user_id = check_property_belongs_to_user(request, redis_client, db_chat)
+if not belongs:
+    raise HTTPException(status_code=404, detail="Not found")
+```
+
+---
 
 ## Required Services
 
-Ensure the following services are running and properly configured:
+| Service | Purpose | Default port |
+|---|---|---|
+| PostgreSQL | Primary relational database | 5432 |
+| Redis | Session storage | 6379 |
+| ChromaDB | Vector store for RAG | 8000 |
+| Ollama _(optional)_ | Local LLM & embedding inference | 11434 |
+| Arize Phoenix _(optional)_ | LLM tracing & observability | 6006 |
+| Azure Entra ID | Authentication & authorization | — |
+| MySQL _(optional)_ | Only needed for SQL dump import/migration | 3306 |
 
-- **PostgreSQL**: For relational data storage.
-- **MySQL**: For importing MySQL/MariaDB dumps and migrating them to _PostgreSQL_
-- **Redis**: For session management.
-- **ChromaDB**: For vector storage and retrieval.
-- **Ollama**: For LLM and embedding services.
-- **Arize Phoenix**: For tracing and monitoring LLM activities.
-- **Azure Entra ID**: For authentication and authorization.
-
-## Additional Notes
-
-- The backend is designed to work seamlessly with the frontend and other components of the system.
-- Refer to the `.env.example` file for all required environment variables.
-- Use the provided [Jupyter notebooks](../notebooks) for prototyping and testing LLM workflows.
-
-## Database Migrations with Alembic
-
-The project uses **Alembic** for managing database schema migrations. This ensures version-controlled, reproducible database changes.
-
-### Creating a New Migration
-
-After modifying a model, generate a migration automatically:
-
-```bash
-cd backend
-poetry run alembic revision --autogenerate -m "Description of changes"
-```
-
-Review the generated migration file in `alembic/versions/` and make any manual adjustments if needed.
-
-### Running Migrations
-
-To apply all pending migrations to the database:
-
-```bash
-cd backend
-poetry run alembic upgrade head
-```
-
-### Viewing Migration History
-
-```bash
-cd backend
-poetry run alembic history
-```
-
-### Downgrading Database
-
-To rollback to a previous version:
-
-```bash
-cd backend
-poetry run alembic downgrade -1  # Go back one revision
-```
-
-### Important Notes
-
-- **Development**: The application still supports `create_db_and_tables()` for quick development setup, but this should not be used in production.
-- **Production**: Always use `alembic upgrade head` to apply migrations.
-- **Version Control**: Always commit migration files to git. Never modify existing migration files in version control.
-- **Environment Variables**: Database connection is configured via `PG_*` environment variables in `alembic/env.py`.
+> All services can be started locally via Docker Compose. See the root `docker-compose.yml` for reference.

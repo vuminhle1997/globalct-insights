@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 from chromadb import Collection
 from llama_index.core import SQLDatabase, StorageContext
@@ -14,6 +14,8 @@ from sqlalchemy import create_engine
 from backend.dependencies import SessionDep, logger
 from backend.models.chat_file import ChatFile
 from backend.services.sql_dump_service import initialize_pg_url
+
+_BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
 
 
 def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: SessionDep):
@@ -47,7 +49,7 @@ def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: 
     logger.info(f"Start indexing markdown for: {id}, {file.path_name}")
 
     md = MarkItDown(enable_plugins=True)
-    md_path = f"{os.getcwd()}/uploads/{file.chat_id}/{file.file_name.split('.')[0]}.md"
+    md_path = str(_BASE_UPLOAD_DIR / file.chat_id / f"{Path(file.file_name).stem}.md")
     result = md.convert(file.path_name)
 
     with open(md_path, "w", encoding="utf-8") as f:
