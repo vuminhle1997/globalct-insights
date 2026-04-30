@@ -160,7 +160,7 @@ def create_embed_model(
         from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 
         return GoogleGenAIEmbedding(
-            model_name=os.environ.get("GOOGLE_EMBED_MODEL", "gemini-embedding-2-preview"),
+            model_name=os.environ.get("GOOGLE_EMBED_MODEL", "gemini-embedding-001"),
             embed_batch_size=10,
             retries=10,
             timeout=_DEFAULT_REQUEST_TIMEOUT,
