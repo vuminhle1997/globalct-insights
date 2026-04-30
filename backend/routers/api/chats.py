@@ -23,7 +23,6 @@ from starlette.requests import Request
 
 from backend.dependencies import (
     SessionDep,
-    base_url,
     get_chroma_collection,
     get_chroma_vector,
     get_redis_client,
