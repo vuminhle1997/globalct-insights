@@ -415,10 +415,11 @@ async def upload_file_to_chat(
         if chat_file.file_name == file.filename:
             logger.error(f"File already uploaded {file.filename}")
             raise HTTPException(status_code=404, detail="File already exists")
-    # Upload file to Folder and persist it
+    # Upload file to Folder and persist it — sanitize filename to prevent path traversal
+    safe_filename = Path(file.filename).name
     chat_folder = BASE_UPLOAD_DIR / f"{chat_id}"
     chat_folder.mkdir(parents=True, exist_ok=True)
-    file_path = chat_folder / f"{file.filename}"
+    file_path = chat_folder / safe_filename
     with open(file_path, "wb+") as buffer:
         buffer.write(file.file.read())
     db_file = ChatFile(
@@ -426,10 +427,10 @@ async def upload_file_to_chat(
         chat_id=db_chat.id,
         path_name=str(file_path),
         mime_type=file.content_type,
-        file_name=file.filename,
+        file_name=safe_filename,
         indexed=None
         if any(
-            ext in file.content_type.lower() or ext in file.filename.lower()
+            ext in file.content_type.lower() or ext in safe_filename.lower()
             for ext in ["sql", "xlsx", "spreadsheet", "csv"]
         )
         else False,
@@ -459,7 +460,7 @@ async def upload_file_to_chat(
         db_client.commit()
 
         if not any(
-            ext in file.content_type.lower() or ext in file.filename.lower()
+            ext in file.content_type.lower() or ext in safe_filename.lower()
             for ext in ["sql", "xlsx", "spreadsheet", "csv"]
         ):
             background_tasks.add_task(
@@ -470,10 +471,10 @@ async def upload_file_to_chat(
                 db_client=db_client,
             )
         if any(
-            ext in file.content_type.lower() or ext in file.filename.lower() for ext in ["xlsx", "spreadsheet", "csv"]
+            ext in file.content_type.lower() or ext in safe_filename.lower() for ext in ["sql", "xlsx", "spreadsheet", "csv"]
         ):
             md_id = str(uuid.uuid4())
-            md_file_path = f"{os.getcwd()}/uploads/{db_chat.id}/{file.filename.split('.')[0]}.md"
+            md_file_path = f"{os.getcwd()}/uploads/{db_chat.id}/{safe_filename.split('.')[0]}.md"
             md_file = ChatFile(
                 id=md_id,
                 file_name=f"{db_file.file_name.split('.')[0]}.md",

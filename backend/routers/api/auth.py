@@ -153,7 +153,7 @@ async def get_user_claims(request: Request, redis_client: Redis = Depends(get_re
     user_info = requests.get("https://graph.microsoft.com/v1.0/me", headers=headers).json()
     group_info = requests.get("https://graph.microsoft.com/v1.0/me/memberOf", headers=headers).json()
 
-    groups: list[str] = map(lambda g: g["id"], list(group_info["value"]))
+    groups: list[str] = list(map(lambda g: g["id"], group_info["value"]))
 
     if not _user_is_part_of_group(groups, ALLOWED_GROUPS_IDS):
         logger.error(f"User {request.client.host} does not belong to any group: {groups}")
