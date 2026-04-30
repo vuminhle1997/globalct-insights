@@ -4,11 +4,11 @@ import pandas as pd
 from llama_index.core import SQLDatabase, StorageContext
 from llama_index.core.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.core.llms import LLM
-from llama_index.core.objects import ObjectIndex, SQLTableNodeMapping, SQLTableSchema
+from llama_index.core.objects import ObjectIndex, SQLTableNodeMapping
 from llama_index.core.query_engine import BaseQueryEngine
 from llama_index.core.settings import Settings
 from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
-from llama_index.core.vector_stores import ExactMatchFilter, FilterOperator, MetadataFilter, MetadataFilters
+from llama_index.core.vector_stores import ExactMatchFilter, MetadataFilters
 from llama_index.readers.web import BeautifulSoupWebReader
 from llama_index.tools.duckduckgo import DuckDuckGoSearchToolSpec
 from llama_index.vector_stores.chroma import ChromaVectorStore
@@ -203,7 +203,7 @@ def create_text_extraction_tool_from_file(query_engine: BaseQueryEngine, file: C
 
 
 def create_sql_engines_tools_from_files(
-    files: list[ChatFile], chroma_vector_store: ChromaVectorStore
+    files: list[ChatFile], chroma_vector_store: ChromaVectorStore, llm: LLM = None
 ) -> list[QueryEngineTool]:
     """
     Creates a list of SQL Query Engine tools from the provided files and a Chroma vector store.
@@ -241,8 +241,7 @@ def create_sql_engines_tools_from_files(
     for file in files:
         filter = MetadataFilters(
             filters=[
-                MetadataFilter(
-                    operator=FilterOperator.EQ,
+                ExactMatchFilter(
                     key="file_id",
                     value=file.id,
                 )
@@ -255,25 +254,20 @@ def create_sql_engines_tools_from_files(
 
             sql_database = SQLDatabase(db_engine, include_tables=file.tables)
             tables_node_mapping = SQLTableNodeMapping(sql_database)
-            table_schema_objs = [SQLTableSchema(table_name=table_name) for table_name in file.tables]
-            nodes = tables_node_mapping.to_nodes(table_schema_objs)
-            for node in nodes:
-                node.metadata = {
-                    "file_id": file.id,
-                }
 
-            obj_index = ObjectIndex.from_objects_and_index(
-                objects=table_schema_objs,
-                object_mapping=tables_node_mapping,
+            obj_index = ObjectIndex(
                 index=index,
+                object_node_mapping=tables_node_mapping,
             )
             query_engine = SQLTableRetrieverQueryEngine(
                 sql_database=sql_database,
-                table_retriever=obj_index.as_retriever(similarity_top_k=1, filter=filter),
+                table_retriever=obj_index.as_retriever(similarity_top_k=1, filters=filter),
+                llm=llm if llm is not None else Settings.llm,
             )
             tables_desc = ", ".join([str(x) for x in file.tables])
             desc = (
-                f"SQL Query Engine for database '{file.database_name}' that can execute SQL queries on the following tables:"
+                f"SQL Query Engine for database '{file.database_name}' that "
+                f"can execute SQL queries on the following tables: "
                 f"{tables_desc}. Use this tool when you need to query or analyze data from this database."
             )
             sql_tools.append(

@@ -162,7 +162,7 @@ def create_embed_model(provider: LLMProvider) -> BaseEmbedding:
 
         return GoogleGenAIEmbedding(
             model_name=GOOGLE_EMBED_MODEL,
-            embed_batch_size=EMBED_BATCH_SIZE,
+            embed_batch_size=100,
             timeout=_DEFAULT_REQUEST_TIMEOUT,
             retries=10,
             verbose=True,

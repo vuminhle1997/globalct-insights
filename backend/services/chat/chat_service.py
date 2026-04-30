@@ -70,7 +70,9 @@ def build_tools_from_params(
         tools.extend(query_engine_tools)
         if files_to_query and file_params.query_type == "sql":
             tools.extend(
-                create_sql_engines_tools_from_files(files=files_to_query, chroma_vector_store=chroma_vector_store)
+                create_sql_engines_tools_from_files(
+                    files=files_to_query, chroma_vector_store=chroma_vector_store, llm=llm
+                )
             )
         if files_to_query and file_params.query_type == "spreadsheet":
             tools.extend(create_pandas_engines_tools_from_files(files=files_to_query))
