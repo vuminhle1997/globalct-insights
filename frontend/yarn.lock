@@ -2439,6 +2439,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@teispace/next-themes@npm:^0.2.1":
+  version: 0.2.1
+  resolution: "@teispace/next-themes@npm:0.2.1"
+  peerDependencies:
+    next: ">=13.0.0"
+    react: ">=18.0.0"
+    react-dom: ">=18.0.0"
+  peerDependenciesMeta:
+    next:
+      optional: true
+  checksum: 10c0/b82f85112e23c018e934518f52a328a94248dde7144e3e3f81dde77a5e1199879b0d8d9d7d405f917d2ffa6aa7a9adfbce180908bcb10b58fd60302f6b2b5557
+  languageName: node
+  linkType: hard
+
 "@tybys/wasm-util@npm:^0.10.1":
   version: 0.10.1
   resolution: "@tybys/wasm-util@npm:0.10.1"
@@ -4144,6 +4158,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"framer-motion@npm:^12.38.0":
+  version: 12.38.0
+  resolution: "framer-motion@npm:12.38.0"
+  dependencies:
+    motion-dom: "npm:^12.38.0"
+    motion-utils: "npm:^12.36.0"
+    tslib: "npm:^2.4.0"
+  peerDependencies:
+    "@emotion/is-prop-valid": "*"
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    "@emotion/is-prop-valid":
+      optional: true
+    react:
+      optional: true
+    react-dom:
+      optional: true
+  checksum: 10c0/bca830d85606ba49e84a1b12fb2b5353622a992809a4ae302084f06fd142e21d790f07ca3678c27e4fb75a8b8e687f42f2ae0cbb13345f2e5730a3fa2c4a5ecf
+  languageName: node
+  linkType: hard
+
 "frontend@workspace:.":
   version: 0.0.0-use.local
   resolution: "frontend@workspace:."
@@ -4172,6 +4208,7 @@ __metadata:
     "@tailwindcss/typography": "npm:^0.5.19"
     "@tanstack/react-query": "npm:^5.100.5"
     "@tanstack/react-query-devtools": "npm:^5.100.5"
+    "@teispace/next-themes": "npm:^0.2.1"
     "@types/lodash": "npm:^4.17.24"
     "@types/node": "npm:^25.6.0"
     "@types/react": "npm:^19.2.14"
@@ -4184,6 +4221,7 @@ __metadata:
     date-fns: "npm:^4.1.0"
     eslint: "npm:^10.2.1"
     eslint-config-next: "npm:16.2.4"
+    framer-motion: "npm:^12.38.0"
     lodash: "npm:^4.18.1"
     lucide-react: "npm:^1.11.0"
     marked: "npm:^18.0.2"
@@ -5379,6 +5417,22 @@ __metadata:
   bin:
     mkdirp: dist/cjs/src/bin.js
   checksum: 10c0/9f2b975e9246351f5e3a40dcfac99fcd0baa31fbfab615fe059fb11e51f10e4803c63de1f384c54d656e4db31d000e4767e9ef076a22e12a641357602e31d57d
+  languageName: node
+  linkType: hard
+
+"motion-dom@npm:^12.38.0":
+  version: 12.38.0
+  resolution: "motion-dom@npm:12.38.0"
+  dependencies:
+    motion-utils: "npm:^12.36.0"
+  checksum: 10c0/ce41da75c240568abd9708cc859cbffb7d6aa490913619e20d23df57abe232ad6cce961c129933535c92b64bfb886958d73e5d162bcd5ddf174378f869977bbe
+  languageName: node
+  linkType: hard
+
+"motion-utils@npm:^12.36.0":
+  version: 12.36.0
+  resolution: "motion-utils@npm:12.36.0"
+  checksum: 10c0/fe08231759064eef5d351a869379246f1e1b2031bda357a6197d2a99ff6b472bce69f8250212713d8bff2ff46978f354ca8c3b8c8f0c5bd337d26a6793ba42fa
   languageName: node
   linkType: hard
 

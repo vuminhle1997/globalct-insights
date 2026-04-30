@@ -8,6 +8,8 @@ import {
 } from '../ui/dialog';
 import { usePostChat, useUpdateChat } from '@/frontend/queries/chats';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Chat } from '@/frontend/types';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +26,7 @@ import ChatAlertError from './alerts/ChatAlertError';
 import FavouritesChatNavigation from './subnavigation/FavouritesChatNavigation';
 import TemplatesChatNavigation from './subnavigation/TemplatesChatNavigation';
 import UsersChatNavigation from './subnavigation/UsersChatNavigation';
-import ChatSettingsForm, { ChatSettingsFormProps } from './ChatSettingsForm';
+import ChatForm, { ChatSettingsFormProps } from './ChatForm';
 import {
   Accordion,
   AccordionContent,
@@ -37,73 +39,36 @@ import {
   HeartIcon,
 } from '@heroicons/react/24/solid';
 
-type FormData = {
-  title: string;
-  description: string;
-  context: string;
-  avatar?: FileList;
-  temperature: number;
-  model: string;
-  model_provider: string;
-};
+export const chatFormSchema = z.object({
+  title: z.string().min(1, 'Titel ist erforderlich'),
+  description: z.string().optional(),
+  context: z.string().min(1, 'Kontext ist erforderlich'),
+  avatar: z.any().optional(),
+  temperature: z.number().min(0).max(1),
+  model: z.string().min(1, 'Bitte wählen Sie ein Sprachmodell'),
+  model_provider: z.string(),
+});
 
-interface ChatEntryFormProps {
+export type ChatDialogFormData = z.infer<typeof chatFormSchema>;
+
+/** Internal alias kept for readability within this file */
+type FormData = ChatDialogFormData;
+
+interface ChatFormDialogProps {
   chat?: Chat;
   onSuccess?: () => void;
   mode?: 'create' | 'update';
-  onCreated?: (chat: Chat) => void; // called only when a new chat is created
-  onUpdated?: (chat: Chat) => void; // called only when an existing chat is updated
+  onCreated?: (chat: Chat) => void;
+  onUpdated?: (chat: Chat) => void;
 }
 
-/**
- * A React component for creating or updating chat entries. This component provides
- * a form interface for managing chat details, including title, description, context,
- * avatar, temperature, and model. It also allows users to use predefined templates
- * or existing chats as a base for creating new chats.
- *
- * @component
- * @param {ChatEntryFormProps} props - The properties for the ChatEntryForm component.
- * @param {Chat | undefined} props.chat - The chat object to edit. If undefined, the form
- * initializes in "create" mode.
- * @param {() => void} [props.onSuccess] - A callback function to execute after a successful
- * form submission.
- * @param {'create' | 'update'} [props.mode] - The mode of the form, either "create" or "update".
- * Defaults to "create" if no chat is provided.
- *
- * @returns {JSX.Element} The rendered ChatEntryForm component.
- *
- * @remarks
- * - The form uses `react-hook-form` for managing form state and validation.
- * - Supports avatar uploads and previews.
- * - Allows users to select predefined templates or existing chats as a base for new chats.
- * - Displays success and error alerts based on the outcome of form submission.
- *
- * @example
- * ```tsx
- * <ChatEntryForm
- *   chat={existingChat}
- *   onSuccess={() => console.log('Chat saved successfully!')}
- * />
- * ```
- *
- * @dependencies
- * - `useForm` from `react-hook-form` for form handling.
- * - `usePostChat` and `useUpdateChat` for API interactions.
- * - `useAppSelector` for accessing Redux state.
- * - `useRouter` from `next/router` for navigation.
- * - `axios` for fetching avatar data.
- *
- * @internal
- * This component is designed to be used within the chat management system and
- * assumes the presence of specific Redux selectors and API hooks.
- */
-export default function ChatEntryForm({
+export default function ChatFormDialog({
   chat,
   onSuccess,
   mode = chat ? 'update' : 'create',
   onCreated,
   onUpdated,
-}: ChatEntryFormProps) {
+}: ChatFormDialogProps) {
   const {
     register,
     handleSubmit,
@@ -112,6 +77,7 @@ export default function ChatEntryForm({
     getValues,
     formState: { errors },
   } = useForm<FormData>({
+    resolver: zodResolver(chatFormSchema),
     defaultValues: chat
       ? {
           title: chat.title,
@@ -125,6 +91,7 @@ export default function ChatEntryForm({
       : {
           model: 'gemini-3.1-flash-lite-preview',
           model_provider: 'GOOGLE_GENAI',
+          temperature: 0.75,
         },
   });
   const [showError, setShowError] = useState(false);
@@ -299,7 +266,7 @@ export default function ChatEntryForm({
 
   return (
     <>
-      <DialogContent className="sm:max-w-[425px] md:max-w-[1000px] flex h-[95vh] lg:h-[80vh]">
+      <DialogContent className="sm:max-w-106.25 md:max-w-250 flex h-[95vh] lg:h-[80vh]">
         <div className="md:flex md:flex-1 md:flex-row gap-4 overflow-y-auto">
           {/* Template List */}
           <div className="md:w-1/3 lg:border-r block lg:flex flex-col pr-4">
@@ -370,7 +337,7 @@ export default function ChatEntryForm({
             </div>
           </div>
           {/* Form */}
-          <ChatSettingsForm {...chatSettingsFormProps} />
+          <ChatForm {...chatSettingsFormProps} />
         </div>
       </DialogContent>
       {showError && <ChatAlertError mode={mode} />}

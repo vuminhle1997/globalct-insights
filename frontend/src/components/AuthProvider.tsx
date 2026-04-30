@@ -2,7 +2,7 @@
 
 import React from 'react';
 import SignInPage from './pages/index/SignInPage';
-import { selectAppState, selectAuthorized, useAppSelector } from '@/frontend';
+import { selectAppState, selectAuthorized, useAppSelector } from '@/frontend/';
 
 /**
  * A React component that provides authentication-based rendering logic.

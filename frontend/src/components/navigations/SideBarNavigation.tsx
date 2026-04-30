@@ -14,7 +14,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import FooterNavigation from './FooterNavigation';
-import ChatEntryForm from '../form/ChatEntryForm';
+import ChatDialogForm from '../form/ChatFormDialog';
 import ChatsNavigation from './ChatsNavigation';
 import {
   selectAppState,
@@ -43,29 +43,11 @@ export default function SideBarNavigation() {
   const { toggleSidebar } = useSidebar();
 
   /**
-   * Toggles the visibility of the command dialog by dispatching an action
-   * to update the `showCommands` state.
-   *
-   * @remarks
-   * This function uses the `useCallback` hook to memoize the callback,
-   * ensuring it only changes when `showCommands` or `dispatch` changes.
-   *
-   * @dependencies
-   * - `showCommands`: The current state of the command dialog visibility.
-   * - `dispatch`: The Redux dispatch function to trigger state updates.
+   * Toggles the visibility of the command dialog.
    */
   const handleShowCommandDialog = useCallback(() => {
     dispatch(setShowCommands(!showCommands));
   }, [showCommands, dispatch]);
-
-  /**
-   * Toggles the state of the sidebar.
-   * This function is memoized using `useCallback` to prevent unnecessary re-renders.
-   * It depends on the `toggleSidebar` function provided as a dependency.
-   */
-  const handleSideBarToggle = useCallback(() => {
-    toggleSidebar();
-  }, [toggleSidebar]);
 
   return (
     <Sidebar>
@@ -78,7 +60,7 @@ export default function SideBarNavigation() {
                 <Tooltip>
                   <TooltipTrigger
                     className="bg-primary dark:bg-background hover:bg-primary/50 p-3 rounded-sm dark:border-white border border-white"
-                    onClick={() => handleSideBarToggle()}
+                    onClick={toggleSidebar}
                   >
                     <XMarkIcon className="h-4 w-4 text-white" />
                   </TooltipTrigger>
@@ -95,13 +77,20 @@ export default function SideBarNavigation() {
           <div className="right-0 flex items-center justify-center">
             {appState === 'idle' ? (
               <React.Fragment>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                  <DialogTrigger className="mx-4 bg-primary dark:bg-background hover:bg-primary/50 p-3 rounded-sm dark:border-white border border-white">
-                    <PencilIcon className="w-4 text-white" />
-                  </DialogTrigger>
-                  <ChatEntryForm onCreated={() => setIsCreateOpen(false)} />
-                </Dialog>
                 <TooltipProvider>
+                  <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DialogTrigger className="mx-4 bg-primary dark:bg-background hover:bg-primary/50 p-3 rounded-sm dark:border-white border border-white">
+                          <PencilIcon className="w-4 text-white" />
+                        </DialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent className="dark:bg-accent bg-primary border-2 border-white shadow-sm">
+                        <p>Neuen Chat erstellen.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <ChatDialogForm onCreated={() => setIsCreateOpen(false)} />
+                  </Dialog>
                   <Tooltip>
                     <TooltipTrigger
                       onClick={handleShowCommandDialog}
@@ -133,8 +122,10 @@ export default function SideBarNavigation() {
       </SidebarHeader>
 
       <SidebarContent>
-        <FavouritesNavigation />
-        <ChatsNavigation />
+        <TooltipProvider>
+          <FavouritesNavigation />
+          <ChatsNavigation />
+        </TooltipProvider>
       </SidebarContent>
 
       <FooterNavigation />

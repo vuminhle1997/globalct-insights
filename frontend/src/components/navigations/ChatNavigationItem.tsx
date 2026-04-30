@@ -1,9 +1,9 @@
 'use client';
-import React from 'react';
 
 import { DialogTrigger } from '../ui/dialog';
 
-import { Link, TrashIcon } from 'lucide-react';
+import { TrashIcon } from 'lucide-react';
+import Link from 'next/link';
 import { Dialog } from '../ui/dialog';
 import { SidebarMenuButton } from '../ui/sidebar';
 import { TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -12,13 +12,12 @@ import { Tooltip } from '../ui/tooltip';
 import { SidebarMenuItem } from '../ui/sidebar';
 import { DropdownMenu } from '../ui/dropdown-menu';
 import { TooltipProvider } from '../ui/tooltip';
-import { Chat } from '@/frontend/types/chats';
 import { EllipsisHorizontalIcon } from '@heroicons/react/24/outline';
 import { DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { DropdownMenuContent } from '../ui/dropdown-menu';
 import { DropdownMenuItem } from '../ui/dropdown-menu';
 import { PencilIcon } from '@heroicons/react/24/solid';
-import ChatEntryForm from '../form/ChatEntryForm';
+import ChatDialogForm from '../form/ChatFormDialog';
 import { useState } from 'react';
 import { useDeleteChat } from '@/frontend/queries/chats';
 import {
@@ -30,6 +29,7 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import { AlertDialog } from '../ui/alert-dialog';
+import { Chat } from '@/frontend/types';
 
 /**
  * ChatNavigationItem component renders a navigation item for a chat.
@@ -85,7 +85,7 @@ export const ChatNavigationItem = ({
         key={`chat-${chat.id}`}
       >
         <Link href={`/chat/${chat.id}`} className="flex-1">
-          <SidebarMenuButton className="w-full text-left fit-content h-full break-words whitespace-normal py-1">
+          <SidebarMenuButton className="w-full text-left fit-content h-full wrap-break-word whitespace-normal py-1">
             {chat.title}
           </SidebarMenuButton>
         </Link>
@@ -97,11 +97,16 @@ export const ChatNavigationItem = ({
           }}
         >
           <DropdownMenu>
-            <TooltipProvider>
+            <TooltipProvider delayDuration={200}>
               <Tooltip>
-                <TooltipTrigger>
-                  <DropdownMenuTrigger className="hover:bg-accent ml-2 w-[30px] h-[30px] flex justify-center items-center rounded-md cursor-pointer mt-1">
-                    <EllipsisHorizontalIcon className="h-4 w-4" />
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="hover:bg-accent ml-2 w-7.5 h-7.5 
+                            flex justify-center items-center rounded-md cursor-pointer mt-1"
+                    >
+                      <EllipsisHorizontalIcon className="h-4 w-4" />
+                    </button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent className="dark:bg-accent bg-primary border-2 border-white shadow-sm">
@@ -129,7 +134,7 @@ export const ChatNavigationItem = ({
             </DropdownMenuContent>
           </DropdownMenu>
           {selectedChat && (
-            <ChatEntryForm
+            <ChatDialogForm
               chat={selectedChat}
               onSuccess={() => {
                 setIsDialogOpen(false);

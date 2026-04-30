@@ -1,6 +1,5 @@
 'use client';
 
-import { v4 as uuid } from 'uuid';
 import { SidebarGroup, SidebarGroupContent, SidebarMenu } from '../ui/sidebar';
 import { Chat } from '@/frontend/types';
 import { useEffect } from 'react';
@@ -13,7 +12,7 @@ import {
   selectChats,
   setAppState,
 } from '@/frontend/store/reducer/app_reducer';
-import { groupChatsByDate } from '@/frontend/utils';
+import { groupChatsByDate } from '@/frontend/utils/sort';
 import DeleteChatDialog from './chat/DeleteChatDialog';
 import ChatsCollectionElement from './chat/ChatsCollectionElement';
 import { useInView } from 'react-intersection-observer';
@@ -132,7 +131,7 @@ export default function ChatsNavigation() {
           {!isLoading &&
             Object.entries(groupedChats).map(([date, chats]) => (
               <ChatsCollectionElement
-                key={uuid()}
+                key={date}
                 date={date}
                 chats={chats}
                 currentChatId={currentChatId}
@@ -140,11 +139,14 @@ export default function ChatsNavigation() {
               />
             ))}
 
-          {/* Improved load more indicator that will be observed */}
-          <div ref={ref} className="py-4 text-center text-sm text-gray-500">
+          {/* Load more indicator observed by intersection observer */}
+          <div
+            ref={ref}
+            className="py-4 text-center text-sm text-muted-foreground"
+          >
             {isFetchingNextPage ? (
               <div className="flex items-center justify-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
                 <span>Lädt mehr Chats...</span>
               </div>
             ) : hasNextPage ? (
@@ -166,7 +168,7 @@ export default function ChatsNavigation() {
                 </svg>
               </div>
             ) : chats.length > 0 ? (
-              <span className="text-sm text-gray-500 dark:text-white">
+              <span className="text-sm text-muted-foreground">
                 Keine weiteren Chats verfügbar 😢
               </span>
             ) : null}
