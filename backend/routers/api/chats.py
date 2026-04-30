@@ -473,6 +473,7 @@ async def chat_stream(
         tools.append(search_engine_tool)
 
     agent = create_agent(system_prompt=db_chat.context, tools=tools, llm=llm)
+    streaming_generator = stream_agent_response(
         agent=agent,
         user_input=chat.text,
         db_client=db_client,
