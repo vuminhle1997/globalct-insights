@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -396,6 +397,10 @@ async def upload_file_to_chat(
     - 404: If the chat is not found, does not belong to the user, or the file already exists.
     - 500: If an error occurs during file processing or indexing.
     """
+    # Validate chat_id is a well-formed UUID to prevent path traversal via path parameter
+    _UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
+    if not _UUID_RE.match(chat_id):
+        raise HTTPException(status_code=400, detail="Invalid chat ID format")
     db_chat = db_client.get(Chat, chat_id)
     # Check if chat exists, if exists, continue
     if not db_chat:
@@ -474,7 +479,7 @@ async def upload_file_to_chat(
             ext in file.content_type.lower() or ext in safe_filename.lower() for ext in ["sql", "xlsx", "spreadsheet", "csv"]
         ):
             md_id = str(uuid.uuid4())
-            md_file_path = f"{os.getcwd()}/uploads/{db_chat.id}/{safe_filename.split('.')[0]}.md"
+            md_file_path = str(BASE_UPLOAD_DIR / db_chat.id / f"{safe_filename.split('.')[0]}.md")
             md_file = ChatFile(
                 id=md_id,
                 file_name=f"{db_file.file_name.split('.')[0]}.md",
