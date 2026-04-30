@@ -32,7 +32,7 @@ CORS_ORIGINS: list[str] = (
 
 # Database
 PG_HOST: str = os.getenv("PG_HOST", "localhost")
-PG_PORT: str = os.getenv("PG_PORT", "5432")
+PG_PORT: int = int(os.getenv("PG_PORT", "5432"))
 PG_USER: str = os.getenv("PG_USER", "postgres")
 PG_PASSWORD: str = os.getenv("PG_PASSWORD", "password")
 PG_COLLECTION: str = os.getenv("PG_COLLECTION", "llama-rag")

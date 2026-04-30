@@ -10,6 +10,8 @@ from fastapi_pagination import add_pagination
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from llama_index.core.settings import Settings
+from starlette.requests import Request
+from starlette.types import ASGIApp
 
 from backend.core.config import CHUNK_OVERLAP, CHUNK_SIZE, CORS_ORIGINS, ENV, LLM_PROVIDER, PORT
 from backend.dependencies import logger
@@ -116,7 +118,7 @@ app.mount("/uploads/avatars", StaticFiles(directory="backend/uploads/avatars"), 
 
 # Middleware to log requests
 @app.middleware("http")
-async def log_requests(request, call_next):
+async def log_requests(request: Request, call_next: ASGIApp):
     logger.info(
         f"Request: {request.method} {request.url}, \n "
         f"ip-address: {request.client.host} \n "

@@ -137,6 +137,8 @@ async def get_user_claims(request: Request, redis_client: Redis = Depends(get_re
     token = redis_client.get(f"session:{session_id}")
 
     claims = decode_jwt(token)
+    # Strict boolean check: only a literal True from create_jwt(isDev=True) grants dev access.
+    # Truthy strings like "true" or integers must not bypass group validation.
     if claims.get("isDev") is True:
         user = {
             **claims,
