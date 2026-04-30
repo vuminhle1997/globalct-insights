@@ -41,6 +41,8 @@ BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 
 # MIME-type / extension keywords that indicate structured data files (SQL, spreadsheet)
 _STRUCTURED_EXTS = frozenset(["sql", "xlsx", "spreadsheet", "csv"])
+# Compiled once at module level — reused across all requests
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
 
 
 def _is_structured_file(content_type: str, filename: str) -> bool:
@@ -408,7 +410,6 @@ async def upload_file_to_chat(
     - 500: If an error occurs during file processing or indexing.
     """
     # Validate chat_id is a well-formed UUID to prevent path traversal via path parameter
-    _UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
     if not _UUID_RE.match(chat_id):
         raise HTTPException(status_code=400, detail="Invalid chat ID format")
     db_chat = db_client.get(Chat, chat_id)
@@ -481,10 +482,10 @@ async def upload_file_to_chat(
             )
         if _is_structured_file(file.content_type, safe_filename) and "sql" not in file.content_type.lower():
             md_id = str(uuid.uuid4())
-            md_file_path = str(BASE_UPLOAD_DIR / db_chat.id / f"{safe_filename.split('.')[0]}.md")
+            md_file_path = str(BASE_UPLOAD_DIR / db_chat.id / f"{Path(safe_filename).stem}.md")
             md_file = ChatFile(
                 id=md_id,
-                file_name=f"{db_file.file_name.split('.')[0]}.md",
+                file_name=f"{Path(db_file.file_name).stem}.md",
                 path_name=md_file_path,
                 indexed=False,
                 chat_id=chat_id,

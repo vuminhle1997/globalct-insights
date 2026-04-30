@@ -45,7 +45,9 @@ def create_llm(
         from llama_index.llms.openai_like import OpenAILike
 
         ionos_base_url = base_url or os.getenv("IONOS_BASE_URL", "http://localhost:11434")
-        api_key = os.getenv("IONOS_API_KEY", "your_api_key_here")
+        api_key = os.getenv("IONOS_API_KEY", "")
+        if not api_key:
+            raise ValueError("IONOS_API_KEY environment variable is required for the IONOS provider.")
         os.environ["OPENAI_API_BASE"] = ionos_base_url
         os.environ["OPENAI_API_KEY"] = api_key
         headers = {
@@ -121,7 +123,9 @@ def create_embed_model(
         from llama_index.embeddings.openai import OpenAIEmbedding
 
         ionos_base_url = base_url or os.getenv("IONOS_BASE_URL", "http://localhost:11434")
-        api_key = os.getenv("IONOS_API_KEY", "your_api_key_here")
+        api_key = os.getenv("IONOS_API_KEY", "")
+        if not api_key:
+            raise ValueError("IONOS_API_KEY environment variable is required for the IONOS provider.")
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
