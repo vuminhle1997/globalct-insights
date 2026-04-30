@@ -11,6 +11,8 @@ from llama_index.core.memory import (
 from llama_index.core.settings import Settings
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
+from backend.prompts.system_prompts import DEFAULT_SYSTEM_PROMPT
+
 DEFAULT_MAX_TOKEN_LIMIT = 128_000  # Aligns with planned usage of 128K-context OSS / frontier models.
 
 
@@ -26,9 +28,7 @@ def create_memory(
     max_facts: int = 25,
     similarity_top_k: int = 5,
     retrieval_context_window: int = 6,
-    system_prompt: str = (
-        "You are a smart AI assistant. Follow system instructions and user-provided rules faithfully."
-    ),
+    system_prompt: str = DEFAULT_SYSTEM_PROMPT,
 ) -> Memory:
     """Create and initialize conversational memory for an agent.
 

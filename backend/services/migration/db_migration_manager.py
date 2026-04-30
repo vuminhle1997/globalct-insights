@@ -1,20 +1,32 @@
+"""Service layer for SQL dump ingestion and database management.
+
+Handles loading MySQL/PostgreSQL dump files, migrating MySQL → PostgreSQL,
+listing tables, and dropping databases on the managed PostgreSQL instance.
+"""
+
 import os
 import re
 
 import mysql.connector
 import psycopg2
 
+from backend.core.config import (
+    MYSQL_HOST,
+    MYSQL_PASSWORD,
+    MYSQL_PORT,
+    MYSQL_USER,
+    PG_HOST,
+    PG_PASSWORD,
+    PG_PORT,
+    PG_USER,
+)
 from backend.dependencies import logger
 
-pg_host = os.getenv("PG_HOST", "localhost")
-pg_port = os.getenv("PG_PORT", 5432)
-pg_user = os.getenv("PG_USER", "root")
-pg_password = os.getenv("PG_PASSWORD", "<PASSWORD>")
-
-mysql_host = os.getenv("MYSQL_HOST", "localhost")
-mysql_port = os.getenv("MYSQL_PORT", 3306)
-mysql_user = os.getenv("MYSQL_USER", "root")
-mysql_password = os.getenv("MYSQL_PASSWORD", "<PASSWORD>")
+# MySQL credentials — used only for migration flows
+_MYSQL_HOST: str = MYSQL_HOST
+_MYSQL_PORT: int = MYSQL_PORT
+_MYSQL_USER: str = MYSQL_USER
+_MYSQL_PASSWORD: str = MYSQL_PASSWORD
 
 
 class PostgresMigration:
@@ -149,7 +161,7 @@ class PostgresMigration:
             logger.error(f"MySQL Error: {e}")
 
 
-def initialize_pg_url(pg_db: str):
+def initialize_pg_url(pg_db: str) -> str:
     """
     Constructs a PostgreSQL connection URL.
 
@@ -158,14 +170,9 @@ def initialize_pg_url(pg_db: str):
 
     Returns:
         str: A formatted PostgreSQL connection URL in the form:
-             "postgresql://<pg_user>:<pg_password>@<pg_host>:<pg_port>/<pg_db>".
-
-    Note:
-        This function assumes that the variables `pg_user`, `pg_password`,
-        `pg_host`, and `pg_port` are defined and accessible in the scope
-        where this function is called.
+             "postgresql://<PG_USER>:<PG_PASSWORD>@<PG_HOST>:<PG_PORT>/<pg_db>".
     """
-    return f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+    return f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{pg_db}"
 
 
 def load_mysql_dump(host: str, port: int, user: str, password: str, db: str, dump_path: str, **kwargs):
@@ -248,10 +255,10 @@ def load_pgsql_dump(host: str, port: int, user: str, password: str, db: str, dum
     """
     try:
         conn = psycopg2.connect(
-            host=pg_host,
-            port=pg_port,
-            user=pg_user,
-            password=pg_password,
+            host=PG_HOST,
+            port=PG_PORT,
+            user=PG_USER,
+            password=PG_PASSWORD,
             dbname="postgres",
             **kwargs,
         )
@@ -343,19 +350,19 @@ def load_dump_to_database(sql_dump_path: str, db_name="TWICE"):
     db = detect_sql_dump_type(sql_dump_path)
     if db == "MySQL":
         logger.debug(f"MySQL dump detected for file: {sql_dump_path}")
-        load_mysql_dump(mysql_host, mysql_port, mysql_user, mysql_password, db_name, sql_dump_path)
+        load_mysql_dump(_MYSQL_HOST, _MYSQL_PORT, _MYSQL_USER, _MYSQL_PASSWORD, db_name, sql_dump_path)
         migration = PostgresMigration(
-            mysql_host,
-            mysql_port,
-            mysql_user,
-            mysql_password,
+            _MYSQL_HOST,
+            _MYSQL_PORT,
+            _MYSQL_USER,
+            _MYSQL_PASSWORD,
             db_name,
         )
-        migration.migrate_mysql_to_pg(pg_host, pg_port, pg_user, pg_password, db_name)
+        migration.migrate_mysql_to_pg(PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, db_name)
         migration.delete_old_db_from_mysql()
     elif db == "Postgres":
         logger.debug(f"PostgreSQL dump detected for file: {sql_dump_path}")
-        load_pgsql_dump(pg_host, pg_port, pg_user, pg_password, db_name, sql_dump_path)
+        load_pgsql_dump(PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, db_name, sql_dump_path)
 
 
 def list_all_tables_from_db(host: str, port: int, user: str, password: str, db: str, db_type: str, **kwargs):
@@ -434,10 +441,10 @@ def delete_database_from_postgres(database_name: str):
     """
     try:
         conn = psycopg2.connect(
-            host=pg_host,
-            port=pg_port,
-            user=pg_user,
-            password=pg_password,
+            host=PG_HOST,
+            port=PG_PORT,
+            user=PG_USER,
+            password=PG_PASSWORD,
             dbname="postgres",
         )
         conn.autocommit = True

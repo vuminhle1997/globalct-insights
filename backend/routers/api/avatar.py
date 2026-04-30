@@ -7,7 +7,7 @@ from starlette.requests import Request
 from backend.dependencies import get_db_session, get_redis_client, logger
 from backend.models.chat import Chat
 from backend.routers.custom_router import APIRouter
-from backend.utils import verify_session_and_get_user_id
+from backend.services.session.session_service import verify_session_and_get_user_id
 
 router = APIRouter(
     prefix="/avatar",

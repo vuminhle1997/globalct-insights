@@ -1,42 +1,27 @@
-import os
 from typing import Annotated
 
 # chroma
 import chromadb
-from dotenv import load_dotenv
 from fastapi import Cookie, Depends, HTTPException
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from redis import Redis
 from sqlmodel import Session, SQLModel, create_engine
 
+from backend.core.config import (
+    CHROMA_COLLECTION,
+    CHROMA_HOST,
+    CHROMA_PORT,
+    DATABASE_URL,
+    REDIS_HOST,
+    REDIS_PORT,
+)
 from backend.logging_config import setup_logging
-
-load_dotenv()
 
 # Logger
 logger = setup_logging()
 
-# redis
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = os.getenv("REDIS_PORT", 6379)
-
-# main DB
-PG_HOST = os.getenv("PG_HOST", "localhost")
-PG_PORT = os.getenv("PG_PORT", 5432)
-PG_USER = os.getenv("PG_USER", "postgres")
-PG_PASSWORD = os.getenv("PG_PASSWORD", "password")
-PG_COLLECTION = os.getenv("PG_COLLECTION", "llama-rag")
-
-DATABASE_URL = f"postgresql://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_COLLECTION}"
 engine = create_engine(DATABASE_URL)
 
-# ollama
-base_url = f"{os.getenv('OLLAMA_HOST', 'localhost')}:{os.getenv('OLLAMA_PORT', 11434)}"
-
-# chroma DB
-CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION_NAME", "llama-rag")
 logger.info(f"Attempting to connect to ChromaDB at {CHROMA_HOST}:{CHROMA_PORT}")
 try:
     chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
@@ -82,8 +67,13 @@ def get_chroma_vector():
     Provide a ChromaVectorStore instance for vector storage operations.
     This function is a generator that yields the vector store.
     """
-    chroma_collection = chroma_client.get_or_create_collection(CHROMA_COLLECTION)
-    chroma_vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+
+    chroma_vector_store = ChromaVectorStore(
+        host=CHROMA_HOST,
+        port=CHROMA_PORT,
+        collection_name=CHROMA_COLLECTION,
+        ssl=False,
+    )
     yield chroma_vector_store
 
 
@@ -102,7 +92,11 @@ async def verify_session(session_id: str = Cookie(None)):
         logger.warning("Unauthorized access attempt without session token")
         raise HTTPException(status_code=401, detail="Unauthorized - No session token provided")
 
-    expires_at = await get_redis_client().get(f"session:{session_id}")
+    redis = Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+    try:
+        expires_at = redis.get(f"session:{session_id}")
+    finally:
+        redis.close()
     if not expires_at:
         logger.warning(f"Unauthorized access attempt with session token: {session_id}")
         raise HTTPException(status_code=401, detail="Unauthorized - Session expired or invalid")
