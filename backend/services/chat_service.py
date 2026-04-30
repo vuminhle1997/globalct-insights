@@ -61,7 +61,7 @@ def build_tools_from_params(
     """
     tools: list[BaseTool] = []
     for file_id, file_params in chat_params.files.items():
-        files_to_query = [f for f in files if f.id == file_id and file_params.queried]
+        files_to_query = [f for f in files if f.id == file_id and file_params.queried is True]
         query_engine_tools = create_query_engine_tools(
             files=files_to_query,
             chroma_vector_store=chroma_vector_store,

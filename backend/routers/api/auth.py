@@ -137,7 +137,7 @@ async def get_user_claims(request: Request, redis_client: Redis = Depends(get_re
     token = redis_client.get(f"session:{session_id}")
 
     claims = decode_jwt(token)
-    if "isDev" in claims and claims["isDev"] == True:
+    if claims.get("isDev") is True:
         user = {
             **claims,
         }

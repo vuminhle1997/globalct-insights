@@ -38,6 +38,16 @@ from backend.utils.check_property import check_property_belongs_to_user
 from backend.utils.upload_sql_dump import detect_sql_dump_type
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+
+# MIME-type / extension keywords that indicate structured data files (SQL, spreadsheet)
+_STRUCTURED_EXTS = frozenset(["sql", "xlsx", "spreadsheet", "csv"])
+
+
+def _is_structured_file(content_type: str, filename: str) -> bool:
+    """Return True when a file is a structured data type (SQL dump or spreadsheet)."""
+    ct = content_type.lower()
+    fn = filename.lower()
+    return any(ext in ct or ext in fn for ext in _STRUCTURED_EXTS)
 BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
@@ -422,9 +432,11 @@ async def upload_file_to_chat(
             raise HTTPException(status_code=404, detail="File already exists")
     # Upload file to Folder and persist it — sanitize filename to prevent path traversal
     safe_filename = Path(file.filename).name
-    chat_folder = BASE_UPLOAD_DIR / f"{chat_id}"
-    chat_folder.mkdir(parents=True, exist_ok=True)
-    file_path = chat_folder / safe_filename
+    # Use db_chat.id (from DB) rather than the user-supplied chat_id URL param to
+    # prevent path traversal via the path parameter.
+    safe_chat_folder = BASE_UPLOAD_DIR / db_chat.id
+    safe_chat_folder.mkdir(parents=True, exist_ok=True)
+    file_path = safe_chat_folder / safe_filename
     with open(file_path, "wb+") as buffer:
         buffer.write(file.file.read())
     db_file = ChatFile(
@@ -433,12 +445,7 @@ async def upload_file_to_chat(
         path_name=str(file_path),
         mime_type=file.content_type,
         file_name=safe_filename,
-        indexed=None
-        if any(
-            ext in file.content_type.lower() or ext in safe_filename.lower()
-            for ext in ["sql", "xlsx", "spreadsheet", "csv"]
-        )
-        else False,
+        indexed=None if _is_structured_file(file.content_type, safe_filename) else False,
     )
 
     if file.content_type.lower().find("sql") != -1 and db_chat is not None:
@@ -464,10 +471,7 @@ async def upload_file_to_chat(
         db_chat.files.append(db_file)
         db_client.commit()
 
-        if not any(
-            ext in file.content_type.lower() or ext in safe_filename.lower()
-            for ext in ["sql", "xlsx", "spreadsheet", "csv"]
-        ):
+        if not _is_structured_file(file.content_type, safe_filename):
             background_tasks.add_task(
                 index_uploaded_file,
                 path=str(file_path),
@@ -475,9 +479,7 @@ async def upload_file_to_chat(
                 chroma_collection=chroma_collection,
                 db_client=db_client,
             )
-        if any(
-            ext in file.content_type.lower() or ext in safe_filename.lower() for ext in ["sql", "xlsx", "spreadsheet", "csv"]
-        ):
+        if _is_structured_file(file.content_type, safe_filename) and "sql" not in file.content_type.lower():
             md_id = str(uuid.uuid4())
             md_file_path = str(BASE_UPLOAD_DIR / db_chat.id / f"{safe_filename.split('.')[0]}.md")
             md_file = ChatFile(
