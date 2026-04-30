@@ -264,10 +264,10 @@ export default function ChatSettingsForm({
                   value={watch('model')}
                   onValueChange={value => setValue('model', value)}
                 >
-                  <SelectTrigger className="w-full h-[60px]">
+                  <SelectTrigger className="w-full h-15">
                     <SelectValue placeholder="Wählen Sie ein Sprachmodell" />
                   </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[300px]">
+                  <SelectContent className="w-(--radix-select-trigger-width) max-h-75">
                     {models &&
                       models.length > 0 &&
                       models.map(model => (

@@ -308,7 +308,7 @@ export default function ChatEntryForm({
 
   return (
     <>
-      <DialogContent className="sm:max-w-[425px] md:max-w-[1000px] flex h-[95vh] lg:h-[80vh]">
+      <DialogContent className="sm:max-w-106.25 md:max-w-250 flex h-[95vh] lg:h-[80vh]">
         <div className="md:flex md:flex-1 md:flex-row gap-4 overflow-y-auto">
           {/* Template List */}
           <div className="md:w-1/3 lg:border-r block lg:flex flex-col pr-4">

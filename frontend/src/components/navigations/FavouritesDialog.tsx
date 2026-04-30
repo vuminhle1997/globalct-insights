@@ -54,7 +54,7 @@ const FavouritesDialog = () => {
                   <HeartIcon className="h-10 w-10 text-primary text-4xl" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
                   <DialogTitle>Favorisierte Chats</DialogTitle>
                 </DialogHeader>

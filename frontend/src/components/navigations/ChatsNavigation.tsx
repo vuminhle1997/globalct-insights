@@ -12,7 +12,7 @@ import {
   selectChats,
   setAppState,
 } from '@/frontend/store/reducer/app_reducer';
-import { groupChatsByDate } from '@/frontend/utils';
+import { groupChatsByDate } from '@/frontend/utils/sort';
 import DeleteChatDialog from './chat/DeleteChatDialog';
 import ChatsCollectionElement from './chat/ChatsCollectionElement';
 import { useInView } from 'react-intersection-observer';
@@ -140,7 +140,10 @@ export default function ChatsNavigation() {
             ))}
 
           {/* Load more indicator observed by intersection observer */}
-          <div ref={ref} className="py-4 text-center text-sm text-muted-foreground">
+          <div
+            ref={ref}
+            className="py-4 text-center text-sm text-muted-foreground"
+          >
             {isFetchingNextPage ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />

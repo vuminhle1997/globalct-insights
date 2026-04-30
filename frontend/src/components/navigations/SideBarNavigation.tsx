@@ -77,13 +77,20 @@ export default function SideBarNavigation() {
           <div className="right-0 flex items-center justify-center">
             {appState === 'idle' ? (
               <React.Fragment>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                  <DialogTrigger className="mx-4 bg-primary dark:bg-background hover:bg-primary/50 p-3 rounded-sm dark:border-white border border-white">
-                    <PencilIcon className="w-4 text-white" />
-                  </DialogTrigger>
-                  <ChatEntryForm onCreated={() => setIsCreateOpen(false)} />
-                </Dialog>
                 <TooltipProvider>
+                  <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DialogTrigger className="mx-4 bg-primary dark:bg-background hover:bg-primary/50 p-3 rounded-sm dark:border-white border border-white">
+                          <PencilIcon className="w-4 text-white" />
+                        </DialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent className="dark:bg-accent bg-primary border-2 border-white shadow-sm">
+                        <p>Neuen Chat erstellen.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <ChatEntryForm onCreated={() => setIsCreateOpen(false)} />
+                  </Dialog>
                   <Tooltip>
                     <TooltipTrigger
                       onClick={handleShowCommandDialog}
@@ -115,8 +122,10 @@ export default function SideBarNavigation() {
       </SidebarHeader>
 
       <SidebarContent>
-        <FavouritesNavigation />
-        <ChatsNavigation />
+        <TooltipProvider>
+          <FavouritesNavigation />
+          <ChatsNavigation />
+        </TooltipProvider>
       </SidebarContent>
 
       <FooterNavigation />
