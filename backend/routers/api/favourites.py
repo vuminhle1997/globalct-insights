@@ -9,6 +9,7 @@ from sqlmodel import Session
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
+from backend.core.serializers import serialize_chat, serialize_favourite
 from backend.dependencies import get_db_session, get_redis_client, logger
 from backend.models.chat import Chat
 from backend.models.favourite import Favourite, FavouritePublic
@@ -21,31 +22,6 @@ router = APIRouter(
     tags=["favourites"],
     responses={404: {"description": "Not found"}},
 )
-
-
-def serialize_chat(chat: Chat) -> dict:
-    return {
-        "id": chat.id,
-        "title": chat.title,
-        "description": chat.description,
-        "context": chat.context,
-        "created_at": chat.created_at,
-        "updated_at": chat.updated_at,
-        "last_interacted_at": chat.last_interacted_at,
-        "user_id": chat.user_id,
-        "avatar_path": chat.avatar_path,
-        "temperature": chat.temperature,
-        "model": chat.model,
-    }
-
-
-def serialize_favourite(favourite: Favourite) -> dict:
-    return {
-        "id": favourite.id,
-        "created_at": favourite.created_at,
-        "chat_id": favourite.chat_id,
-        "user_id": favourite.user_id,
-    }
 
 
 @router.get("/", response_model=Page[FavouritePublic])
