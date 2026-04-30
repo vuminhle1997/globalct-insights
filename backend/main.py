@@ -10,14 +10,14 @@ from fastapi_pagination import add_pagination
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 from llama_index.core.settings import Settings
-from starlette.requests import Request
 from starlette.middleware.base import RequestResponseEndpoint
+from starlette.requests import Request
 
-from backend.core.config import CHUNK_OVERLAP, CHUNK_SIZE, CORS_ORIGINS, ENV, LLM_PROVIDER, PORT
+from backend.core.config import CHUNK_OVERLAP, CHUNK_SIZE, CORS_ORIGINS, LLM_PROVIDER, PORT
 from backend.dependencies import logger
 from backend.routers.api.auth import router as auth_router
 from backend.routers.route import router
-from backend.services.llm_factory import create_embed_model, create_llm
+from backend.services.factory.llm_factory import create_embed_model, create_llm
 
 
 def check_required_env_vars():
@@ -32,7 +32,6 @@ def check_required_env_vars():
         "ALLOWED_GROUPS_IDS",
         "REDIS_HOST",
         "REDIS_PORT",
-        "DATABASE_URL",
         "PG_HOST",
         "PG_PORT",
         "PG_USER",
@@ -147,4 +146,3 @@ if __name__ == "__main__":
     config = Config()
     config.bind = [f"0.0.0.0:{PORT}"]
     asyncio.run(serve(app, config))
-

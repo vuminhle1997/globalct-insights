@@ -98,8 +98,7 @@ def create_llm(
 
     else:
         raise ValueError(
-            f"Unsupported LLM provider: '{provider}'. "
-            "Supported providers: 'IONOS', 'OLLAMA', 'GOOGLE_GENAI'."
+            f"Unsupported LLM provider: '{provider}'. Supported providers: 'IONOS', 'OLLAMA', 'GOOGLE_GENAI'."
         )
 
 
@@ -160,10 +159,15 @@ def create_embed_model(
     elif provider_upper == "GOOGLE_GENAI":
         from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 
-        return GoogleGenAIEmbedding()
+        return GoogleGenAIEmbedding(
+            model_name=os.environ.get("GOOGLE_EMBED_MODEL", "gemini-embedding-2-preview"),
+            embed_batch_size=10,
+            retries=10,
+            timeout=_DEFAULT_REQUEST_TIMEOUT,
+            verbose=True,
+        )
 
     else:
         raise ValueError(
-            f"Unsupported embedding provider: '{provider}'. "
-            "Supported providers: 'IONOS', 'OLLAMA', 'GOOGLE_GENAI'."
+            f"Unsupported embedding provider: '{provider}'. Supported providers: 'IONOS', 'OLLAMA', 'GOOGLE_GENAI'."
         )

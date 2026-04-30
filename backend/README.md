@@ -192,7 +192,6 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 
 # ── PostgreSQL (primary database) ────────────────────────────────────────
-DATABASE_URL=postgresql://postgres:password@localhost:5432/llama-rag
 PG_HOST=localhost
 PG_PORT=5432
 PG_USER=postgres

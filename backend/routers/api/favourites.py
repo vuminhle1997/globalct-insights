@@ -14,7 +14,7 @@ from backend.dependencies import get_db_session, get_redis_client, logger
 from backend.models.chat import Chat
 from backend.models.favourite import Favourite, FavouritePublic
 from backend.routers.custom_router import APIRouter
-from backend.services.session_service import check_property_belongs_to_user, verify_session_and_get_user_id
+from backend.services.session.session_service import check_property_belongs_to_user, verify_session_and_get_user_id
 
 router = APIRouter(
     prefix="/favourites",
@@ -135,9 +135,7 @@ async def get_favourite_of_chat(
             }
         }
     """
-    db_chat: Chat | None = (
-        db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
-    )
+    db_chat: Chat | None = db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
     if not db_chat:
         logger.error(f"Chat {chat_id} not found in database")
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -193,12 +191,8 @@ async def favour_chat_by_id(
             "chat_id": "chat123"
         }
     """
-    db_chat: type[Chat] = (
-        db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
-    )
-    belongs_to_user, user_id = check_property_belongs_to_user(
-        request, redis_client, db_chat
-    )
+    db_chat: type[Chat] = db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
+    belongs_to_user, user_id = check_property_belongs_to_user(request, redis_client, db_chat)
 
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
@@ -216,11 +210,7 @@ async def favour_chat_by_id(
         db_client.commit()
         db_client.refresh(db_favourites)
         # Reload the favourite with chat relationship
-        db_favourites = (
-            db_client.query(Favourite)
-            .options(selectinload(Favourite.chat))
-            .get(db_favourites.id)
-        )
+        db_favourites = db_client.query(Favourite).options(selectinload(Favourite.chat)).get(db_favourites.id)
         return {
             **serialize_favourite(db_favourites),
             "chat": serialize_chat(db_favourites.chat),
@@ -273,12 +263,8 @@ async def delete_favourite_of_chat_by(
             }
         }
     """
-    db_chat: type[Chat] = (
-        db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
-    )
-    belongs_to_user, user_id = check_property_belongs_to_user(
-        request, redis_client, db_chat
-    )
+    db_chat: type[Chat] = db_client.query(Chat).options(selectinload(Chat.favourite)).get(chat_id)
+    belongs_to_user, user_id = check_property_belongs_to_user(request, redis_client, db_chat)
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")

@@ -1,12 +1,12 @@
 from chromadb import Collection
 from sqlmodel import Session
 
+from backend.core.config import PG_HOST as pg_host, PG_PASSWORD as pg_password, PG_PORT as pg_port, PG_USER as pg_user
 from backend.dependencies import SessionDep, engine, logger
 from backend.models.chat import Chat
 from backend.models.chat_file import ChatFile
-from backend.services.indexer import index_sql_dump
-from backend.core.config import PG_HOST as pg_host, PG_PASSWORD as pg_password, PG_PORT as pg_port, PG_USER as pg_user
-from backend.services.sql_dump_service import list_all_tables_from_db, load_dump_to_database
+from backend.services.migration.db_migration_manager import list_all_tables_from_db, load_dump_to_database
+from backend.services.rag.indexer.files_indexer import index_sql_dump
 
 
 def process_dump_to_persist(

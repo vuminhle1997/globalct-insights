@@ -1,6 +1,5 @@
 from fastapi import HTTPException
-from llama_index.core.llms import LLM
-from llama_index.core.llms import ChatMessage as LLMChatMessage
+from llama_index.core.llms import LLM, ChatMessage as LLMChatMessage
 from llama_index.core.settings import Settings
 from llama_index.core.tools import BaseTool
 from llama_index.vector_stores.chroma import ChromaVectorStore
@@ -8,14 +7,14 @@ from llama_index.vector_stores.chroma import ChromaVectorStore
 from backend.models.chat import Chat, ChatParams
 from backend.models.chat_file import ChatFile
 from backend.models.chat_message import ChatMessage
-from backend.services.llm_factory import create_llm
-from backend.services.tools_initializer import (
+from backend.services.chat.chat_tools import (
     create_pandas_engines_tools_from_files,
     create_query_engine_tools,
     create_search_engine_tool,
     create_sql_engines_tools_from_files,
     create_url_loader_tool,
 )
+from backend.services.factory.llm_factory import create_llm
 
 
 def resolve_llm_for_chat(db_chat: Chat) -> LLM:
@@ -70,9 +69,9 @@ def build_tools_from_params(
         )
         tools.extend(query_engine_tools)
         if files_to_query and file_params.query_type == "sql":
-            tools.extend(create_sql_engines_tools_from_files(
-                files=files_to_query, chroma_vector_store=chroma_vector_store
-            ))
+            tools.extend(
+                create_sql_engines_tools_from_files(files=files_to_query, chroma_vector_store=chroma_vector_store)
+            )
         if files_to_query and file_params.query_type == "spreadsheet":
             tools.extend(create_pandas_engines_tools_from_files(files=files_to_query))
 

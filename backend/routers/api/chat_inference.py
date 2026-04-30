@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import re
 import time
 import uuid
@@ -17,7 +16,7 @@ from llama_index.vector_stores.chroma import ChromaVectorStore
 from redis import Redis
 from starlette.requests import Request
 
-from backend.core.serializers import serialize_chat, serialize_chat_file
+from backend.core.serializers import serialize_chat
 from backend.dependencies import (
     SessionDep,
     get_chroma_collection,
@@ -29,13 +28,13 @@ from backend.models.chat import Chat, ChatQuery
 from backend.models.chat_file import ChatFile
 from backend.models.chat_message import ChatMessage
 from backend.routers.custom_router import APIRouter
-from backend.services.chat_service import build_chat_history, build_tools_from_params, resolve_llm_for_chat
-from backend.services.indexer import index_spreadsheet, index_uploaded_file
-from backend.services.llm_agent import create_agent
-from backend.services.memory import create_memory
-from backend.services.tasks import process_dump_to_persist
-from backend.services.session_service import check_property_belongs_to_user
-from backend.services.sql_dump_service import detect_sql_dump_type
+from backend.services.chat.chat_agent import create_agent
+from backend.services.chat.chat_service import build_chat_history, build_tools_from_params, resolve_llm_for_chat
+from backend.services.memory.agent_memory import create_memory
+from backend.services.migration.db_migration_manager import detect_sql_dump_type
+from backend.services.rag.indexer.files_indexer import index_spreadsheet, index_uploaded_file
+from backend.services.rag.sql_ingestion import process_dump_to_persist
+from backend.services.session.session_service import check_property_belongs_to_user
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 
@@ -50,6 +49,8 @@ def _is_structured_file(content_type: str, filename: str) -> bool:
     ct = content_type.lower()
     fn = filename.lower()
     return any(ext in ct or ext in fn for ext in _STRUCTURED_EXTS)
+
+
 BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
@@ -296,6 +297,7 @@ async def chat_with_given_chat_id(
     **Raises**:
     - 404: If the chat is not found or does not belong to the user.
     """
+
     if not chat:
         logger.error("Missing chat parameter")
         raise HTTPException(status_code=404, detail="Body: text is required")

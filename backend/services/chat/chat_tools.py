@@ -21,8 +21,8 @@ from sqlalchemy import create_engine
 
 from backend.models.chat import Chat, FileParams
 from backend.models.chat_file import ChatFile
+from backend.services.migration.db_migration_manager import initialize_pg_url
 from backend.services.rag.pandas.pandas_query_engine import PandasQueryEngine
-from backend.services.sql_dump_service import initialize_pg_url
 
 
 def create_filters_for_files(files: list[ChatFile]):

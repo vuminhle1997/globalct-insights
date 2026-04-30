@@ -10,7 +10,7 @@ from backend.dependencies import get_db_session, get_redis_client, logger
 from backend.models.chat import Chat
 from backend.models.chat_message import ChatMessage, ChatMessagePublic
 from backend.routers.custom_router import APIRouter
-from backend.services.session_service import verify_session_and_get_user_id
+from backend.services.session.session_service import verify_session_and_get_user_id
 
 router = APIRouter(
     prefix="/messages",
@@ -80,9 +80,7 @@ async def get_messages_by_chat_id(
         logger.error(f"Chat {chat_id} does not belong to {user_id}")
         raise HTTPException(status_code=404, detail="Chat does not belong to you")
 
-    query = query.filter(ChatMessage.chat_id == chat_id).order_by(
-        ChatMessage.created_at.desc()
-    )
+    query = query.filter(ChatMessage.chat_id == chat_id).order_by(ChatMessage.created_at.desc())
     page = sqlalchemy_pagination(query)
 
     return page

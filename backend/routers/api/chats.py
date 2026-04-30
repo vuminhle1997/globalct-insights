@@ -21,9 +21,9 @@ from backend.models.chat import Chat, ChatPublic
 from backend.models.chat_file import ChatFile
 from backend.models.chat_message import ChatMessage
 from backend.routers.custom_router import APIRouter
-from backend.services.indexer import deletes_file_index_from_collection
-from backend.services.session_service import check_property_belongs_to_user, verify_session_and_get_user_id
-from backend.services.sql_dump_service import delete_database_from_postgres
+from backend.services.migration.db_migration_manager import delete_database_from_postgres
+from backend.services.rag.indexer.files_indexer import deletes_file_index_from_collection
+from backend.services.session.session_service import check_property_belongs_to_user, verify_session_and_get_user_id
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,8 +39,9 @@ router = APIRouter(
 # CRUD endpoints only — AI inference endpoints live in chat_inference.py
 # ---------------------------------------------------------------------------
 
+
 @router.get("/", response_model=Page[ChatPublic])
-async def get_all_chats(
+async def get_chats(
     db_client: SessionDep = SessionDep,
     request: Request = Request,
     redis_client: Redis = Depends(get_redis_client),

@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 
 from backend.dependencies import SessionDep, logger
 from backend.models.chat_file import ChatFile
-from backend.services.sql_dump_service import initialize_pg_url
+from backend.services.migration.db_migration_manager import initialize_pg_url
 
 _BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
 
@@ -169,15 +169,26 @@ def index_sql_dump(file: ChatFile, chroma_collection: Collection):
 
         # Convert table schemas to nodes (schema text) and attach metadata
         nodes = tables_node_mapping.to_nodes(objs=table_schema_objs)
+        valid_nodes = []
         for node in nodes:
+            # Skip nodes with empty content to prevent embedding KeyErrors
+            if not node.get_content().strip():
+                logger.warning(f"Skipping empty node from SQL schema: {node.node_id}")
+                continue
+
             # Preserve any existing metadata and append our own
             base_meta = getattr(node, "metadata", {}) or {}
             base_meta.update({"file_id": file.id})
             node.metadata = base_meta
+            valid_nodes.append(node)
+
+        if not valid_nodes:
+            logger.warning(f"No valid nodes to index for database: {file.database_name} (file_id={file.id})")
+            return
 
         # Directly build a VectorStoreIndex from nodes (no ObjectIndex indirection needed here)
         VectorStoreIndex(
-            nodes,
+            valid_nodes,
             storage_context=storage_context,
             show_progress=True,
             embed_model=Settings.embed_model,
