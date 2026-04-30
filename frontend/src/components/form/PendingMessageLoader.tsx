@@ -1,7 +1,6 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import React from 'react';
 
 /**
  * A functional component that displays a pending message loader overlay.

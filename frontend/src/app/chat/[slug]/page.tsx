@@ -23,7 +23,7 @@ import {
   usePostFavourite,
   useDeleteFavourite,
 } from '@/frontend/queries/favourites';
-import ChatEntryForm from '@/components/form/ChatEntryForm';
+import ChatDialogForm from '@/components/form/ChatFormDialog';
 import PendingMessageLoader from '@/components/form/PendingMessageLoader';
 import ChatNotFoundScreen, {
   UserChatNotFoundScreen,
@@ -521,7 +521,7 @@ export default function SlugChatPage({
                 open={isCreateChatDialogOpen}
                 onOpenChange={setIsCreateChatDialogOpen}
               >
-                <ChatEntryForm
+                <ChatDialogForm
                   mode="create"
                   onSuccess={() => {
                     setIsCreateChatDialogOpen(false);

@@ -3,6 +3,8 @@ import { marked } from 'marked';
 import { parseAgentResponse } from '@/lib/utils';
 import React from 'react';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
 
 export interface ThinkAnswerBlockProps {
   response: string;
@@ -38,10 +40,11 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
   return (
     <div className="space-y-4 my-4">
       {hasReasoningBlocks && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={handleToggle}
-          className="w-full text-left my-2 flex flex-row justify-between items-center px-2 py-1 rounded hover:bg-muted/50 transition-colors"
+          className="w-full justify-between my-2 px-2 py-1 h-auto"
           aria-expanded={showTrajectories}
           aria-label={
             showTrajectories
@@ -50,23 +53,12 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
           }
         >
           <Label className="cursor-pointer">Gedankenprozess</Label>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={`ml-2 transition-transform duration-200 ${
+          <ChevronDown
+            className={`ml-2 h-4 w-4 transition-transform duration-200 ${
               showTrajectories ? 'rotate-180' : ''
             }`}
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </button>
+          />
+        </Button>
       )}
 
       {/* When collapsed, we only show Answer blocks; when expanded we show all */}
@@ -83,7 +75,7 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
               <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-500 dark:text-yellow-100 p-4 rounded">
                 <p className="font-semibold mb-1">🧠 Gedanke</p>
                 <div
-                  className="prose prose-sm sm:prose dark:prose-invert whitespace-pre-line max-w-none"
+                  className="prose dark:prose-invert whitespace-pre-line w-full max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: marked(block.content),
                   }}
@@ -103,7 +95,7 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
                   🔎 Beobachtung
                 </p>
                 <div
-                  className="prose prose-sm sm:prose dark:prose-invert max-w-none"
+                  className="prose dark:prose-invert w-full max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: marked(block.content),
                   }}
@@ -123,7 +115,7 @@ function ThinkAnswerBlockInner(props: ThinkAnswerBlockProps) {
                   ✅ Antwort
                 </p>
                 <div
-                  className="prose prose-sm sm:prose dark:prose-invert max-w-none"
+                  className="prose dark:prose-invert w-full max-w-none"
                   dangerouslySetInnerHTML={{
                     __html: marked(block.content),
                   }}

@@ -9,6 +9,7 @@ import {
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
+import Image from 'next/image';
 
 import { Slider } from '../ui/slider';
 import {
@@ -31,19 +32,10 @@ import {
 import { Chat } from '@/frontend/types';
 import { RefObject } from 'react';
 import { selectLLMModels, useAppSelector } from '@/frontend';
-
-type FormData = {
-  title: string;
-  description: string;
-  context: string;
-  avatar?: FileList;
-  temperature: number;
-  model: string;
-  model_provider: string;
-};
+import { type ChatDialogFormData as FormData } from './ChatFormDialog';
 
 export interface ChatSettingsFormProps {
-  handleSubmit: UseFormHandleSubmit<FormData, FormData>;
+  handleSubmit: UseFormHandleSubmit<FormData>;
   onSubmit: (data: FormData) => Promise<void>;
   register: UseFormRegister<FormData>;
   watch: UseFormWatch<FormData>;
@@ -60,29 +52,7 @@ export interface ChatSettingsFormProps {
   getValues: UseFormGetValues<FormData>;
 }
 
-/**
- * A React component for rendering a chat settings form. This form allows users to create or edit chat configurations,
- * including uploading an avatar, setting a title, description, context, selecting a language model, and adjusting the temperature.
- *
- * @param {Object} props - The properties passed to the component.
- * @param {Function} props.handleSubmit - The function to handle form submission, typically provided by `react-hook-form`.
- * @param {Function} props.handleAvatarClick - The function to handle avatar click events.
- * @param {Function} props.onSubmit - The function to execute when the form is submitted.
- * @param {Function} props.register - The `react-hook-form` register function for managing form inputs.
- * @param {Function} props.watch - The `react-hook-form` watch function to observe form values.
- * @param {Function} props.setValue - The `react-hook-form` setValue function to programmatically set form values.
- * @param {Object} props.errors - The object containing validation errors for form fields.
- * @param {Object} props.chat - The chat object containing existing chat settings (used in edit mode).
- * @param {React.RefObject<HTMLInputElement>} props.fileInputRef - A reference to the hidden file input element for avatar uploads.
- * @param {string | null} props.avatarPreview - The URL or data URI of the avatar preview image.
- * @param {string} props.mode - The mode of the form, either `'create'` or `'edit'`.
- * @param {Function} props.setAvatarPreview - A function to update the avatar preview state.
- * @param {boolean} props.isCreating - A boolean indicating whether a chat is currently being created.
- * @param {boolean} props.isUpdating - A boolean indicating whether a chat is currently being updated.
- *
- * @returns {JSX.Element} The rendered chat settings form component.
- */
-export default function ChatSettingsForm({
+export default function ChatForm({
   handleSubmit,
   handleAvatarClick,
   onSubmit,
@@ -130,16 +100,17 @@ export default function ChatSettingsForm({
                   onClick={handleAvatarClick}
                   className={`w-60 h-60 rounded-full overflow-hidden cursor-pointer relative group ${
                     !avatarPreview
-                      ? 'border-2 border-dashed border-gray-300 hover:border-gray-400 bg-gray-50'
+                      ? 'border-2 border-dashed border-input hover:border-muted-foreground bg-muted'
                       : ''
                   }`}
                 >
                   {avatarPreview ? (
                     <>
-                      <img
+                      <Image
                         src={avatarPreview}
                         alt="Avatar preview"
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="text-white text-sm">Ändern</span>
@@ -149,7 +120,7 @@ export default function ChatSettingsForm({
                     <div className="flex flex-col items-center justify-center h-full p-4">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-8 w-8 text-gray-400"
+                        className="h-8 w-8 text-muted-foreground"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -161,7 +132,7 @@ export default function ChatSettingsForm({
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                         />
                       </svg>
-                      <span className="text-sm text-gray-500 text-center mt-2">
+                      <span className="text-sm text-muted-foreground text-center mt-2">
                         Avatar hochladen
                       </span>
                     </div>
@@ -271,10 +242,10 @@ export default function ChatSettingsForm({
                   value={watch('model')}
                   onValueChange={value => setValue('model', value)}
                 >
-                  <SelectTrigger className="w-full h-[60px]">
+                  <SelectTrigger className="w-full h-15">
                     <SelectValue placeholder="Wählen Sie ein Sprachmodell" />
                   </SelectTrigger>
-                  <SelectContent className="w-[var(--radix-select-trigger-width)] max-h-[300px]">
+                  <SelectContent className="w-(--radix-select-trigger-width) max-h-75">
                     {models &&
                       models.length > 0 &&
                       models.map(model => (
