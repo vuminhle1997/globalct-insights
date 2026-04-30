@@ -6,6 +6,8 @@ from llama_index.core.llms import LLM
 
 load_dotenv()
 
+_DEFAULT_REQUEST_TIMEOUT = 420  # seconds — generous timeout for large-context LLM calls
+
 
 def create_llm(
     provider: str,
@@ -58,7 +60,7 @@ def create_llm(
             default_headers=headers,
             api_key=api_key,
             context_window=128000,
-            request_timeout=420,
+            request_timeout=_DEFAULT_REQUEST_TIMEOUT,
         )
 
     elif provider_upper == "OLLAMA":
@@ -71,7 +73,7 @@ def create_llm(
             model=model or os.getenv("OLLAMA_MODEL", "llama3.1"),
             base_url=ollama_base_url,
             temperature=temperature,
-            request_timeout=420,
+            request_timeout=_DEFAULT_REQUEST_TIMEOUT,
         )
 
     elif provider_upper == "GOOGLE_GENAI":

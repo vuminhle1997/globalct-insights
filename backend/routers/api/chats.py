@@ -447,7 +447,7 @@ async def chat_stream(
     )
 
     for file_id, file_params in chat.params.files.items():
-        files_to_query = [file for file in files if file.id == file_id and file_params.queried == True]
+        files_to_query = [file for file in files if file.id == file_id and file_params.queried]
         query_engine_tools = create_query_engine_tools(
             files=files_to_query,
             chroma_vector_store=chroma_vector_store,
@@ -456,15 +456,14 @@ async def chat_stream(
         )
         if len(query_engine_tools) > 0:
             tools += query_engine_tools
-        for file in files_to_query:
-            if file.id == file_id and file_params.query_type == "sql":
-                sql_tools = create_sql_engines_tools_from_files(
-                    files=files_to_query, chroma_vector_store=chroma_vector_store
-                )
-                tools += sql_tools
-            if file.id == file_id and file_params.query_type == "spreadsheet":
-                pd_tools = create_pandas_engines_tools_from_files(files=files_to_query)
-                tools += pd_tools
+        if files_to_query and file_params.query_type == "sql":
+            sql_tools = create_sql_engines_tools_from_files(
+                files=files_to_query, chroma_vector_store=chroma_vector_store
+            )
+            tools += sql_tools
+        if files_to_query and file_params.query_type == "spreadsheet":
+            pd_tools = create_pandas_engines_tools_from_files(files=files_to_query)
+            tools += pd_tools
 
     if chat.params.use_link_scraping:
         scrape_tool = create_url_loader_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
@@ -474,7 +473,6 @@ async def chat_stream(
         tools.append(search_engine_tool)
 
     agent = create_agent(system_prompt=db_chat.context, tools=tools, llm=llm)
-    streaming_generator = stream_agent_response(
         agent=agent,
         user_input=chat.text,
         db_client=db_client,
@@ -592,7 +590,7 @@ async def chat_with_given_chat_id(
     tools: list[BaseTool] = []
 
     for file_id, file_params in chat.params.files.items():
-        files_to_query = [file for file in files if file.id == file_id and file_params.queried == True]
+        files_to_query = [file for file in files if file.id == file_id and file_params.queried]
         query_engine_tools = create_query_engine_tools(
             files=files_to_query,
             chroma_vector_store=chroma_vector_store,
@@ -601,15 +599,14 @@ async def chat_with_given_chat_id(
         )
         if len(query_engine_tools) > 0:
             tools += query_engine_tools
-        for file in files_to_query:
-            if file.id == file_id and file_params.query_type == "sql":
-                sql_tools = create_sql_engines_tools_from_files(
-                    files=files_to_query, chroma_vector_store=chroma_vector_store
-                )
-                tools += sql_tools
-            if file.id == file_id and file_params.query_type == "spreadsheet":
-                pd_tools = create_pandas_engines_tools_from_files(files=files_to_query)
-                tools += pd_tools
+        if files_to_query and file_params.query_type == "sql":
+            sql_tools = create_sql_engines_tools_from_files(
+                files=files_to_query, chroma_vector_store=chroma_vector_store
+            )
+            tools += sql_tools
+        if files_to_query and file_params.query_type == "spreadsheet":
+            pd_tools = create_pandas_engines_tools_from_files(files=files_to_query)
+            tools += pd_tools
 
     if chat.params.use_link_scraping:
         scrape_tool = create_url_loader_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
