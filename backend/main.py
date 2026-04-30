@@ -20,31 +20,48 @@ from backend.routers.route import router
 from backend.services.factory.llm_factory import create_embed_model, create_llm
 
 
-def check_required_env_vars():
+def check_required_env_vars() -> None:
+    """
+    Check that all required environment variables are set. If any are missing, log an error and exit the application.
+    This function should be called at application startup to ensure that the app has all
+    necessary configuration before running.
+    """
     import sys
 
     required_vars = [
+        # Azure AD
         "CLIENT_ID",
         "CLIENT_SECRET",
         "TENANT_ID",
         "REDIRECT_URI",
         "FRONTEND_URL",
         "ALLOWED_GROUPS_IDS",
+        # Redis
         "REDIS_HOST",
         "REDIS_PORT",
+        # PG database (used for LLM context storage)
         "PG_HOST",
         "PG_PORT",
         "PG_USER",
         "PG_PASSWORD",
         "PG_COLLECTION",
+        # MySQL (used only for SQL dump migration flows)
         "MYSQL_HOST",
         "MYSQL_PORT",
         "MYSQL_USER",
         "MYSQL_PASSWORD",
+        # Chroma
         "CHROMA_HOST",
         "CHROMA_PORT",
+        "CHROMA_COLLECTION",
+        # Phoenix monitoring
         "PHOENIX_API_KEY",
         "PHOENIX_COLLECTOR_ENDPOINT",
+        # LLM provider configs
+        "LLM_PROVIDER",
+        "GOOGLE_API_KEY" if LLM_PROVIDER == "GOOGLE_GENAI" else None,
+        "IONOS_API_KEY" if LLM_PROVIDER == "IONOS" else None,
+        "OLLAMA_BASE_URL" if LLM_PROVIDER == "OLLAMA" else None,
     ]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
@@ -53,7 +70,10 @@ def check_required_env_vars():
 
 
 def _is_endpoint_reachable(url: str, timeout: float = 1.0) -> bool:
-    """Return True when an HTTP endpoint is reachable (status code is irrelevant)."""
+    """
+    Return True when an HTTP endpoint is reachable (status code is irrelevant).
+    This is used to check if the Phoenix collector endpoint is reachable before setting up tracing.
+    """
     try:
         response = requests.get(url, timeout=timeout)
         return response.status_code >= 100
@@ -61,7 +81,11 @@ def _is_endpoint_reachable(url: str, timeout: float = 1.0) -> bool:
         return False
 
 
-# loads envs and setup Phoenix monitoring
+"""
+Main application entry point for the Llama RAG backend service.
+This module initializes the FastAPI application, sets up routes and middleware, and starts the server.
+"""
+
 try:
     phoenix_key, phoenix_url = os.getenv("PHOENIX_API_KEY"), os.getenv("PHOENIX_COLLECTOR_ENDPOINT")
     if not phoenix_key or not phoenix_url:
@@ -85,8 +109,6 @@ base_dir = Path(__file__).resolve().parent
 uploads_dir = base_dir / "uploads" / "avatars"
 
 if not uploads_dir.exists():
-    # parents=True ensures 'uploads' is created if it doesn't exist
-    # exist_ok=True prevents errors if another process creates it simultaneously
     uploads_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Created directory: {uploads_dir}")
 
@@ -100,6 +122,7 @@ Settings.embed_model = embed_model
 Settings.chunk_size = CHUNK_SIZE
 Settings.chunk_overlap = CHUNK_OVERLAP
 
+# FastAPI app initialization
 app = FastAPI()
 app.include_router(router)
 app.include_router(auth_router)
@@ -111,7 +134,6 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
-
 app.mount("/uploads/avatars", StaticFiles(directory="backend/uploads/avatars"), name="avatar")
 
 

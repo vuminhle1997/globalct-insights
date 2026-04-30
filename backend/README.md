@@ -214,7 +214,6 @@ LLM_PROVIDER=OLLAMA           # OLLAMA | IONOS | GOOGLE_GENAI
 
 # Ollama (local)
 OLLAMA_HOST=localhost
-OLLAMA_PORT=11434
 OLLAMA_MODEL=llama3.1
 OLLAMA_EMBED_MODEL=mxbai-embed-large
 

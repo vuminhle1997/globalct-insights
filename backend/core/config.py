@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Azure AD
-CLIENT_ID: str = os.getenv("CLIENT_ID", "")
-CLIENT_SECRET: str = os.getenv("CLIENT_SECRET", "")
-TENANT_ID: str = os.getenv("TENANT_ID", "")
-AUTHORITY: str = f"https://login.microsoftonline.com/{TENANT_ID}"
+CLIENT_ID: str | None = os.getenv("CLIENT_ID")
+CLIENT_SECRET: str | None = os.getenv("CLIENT_SECRET")
+TENANT_ID: str | None = os.getenv("TENANT_ID")
+AUTHORITY: str = f"https://login.microsoftonline.com/{TENANT_ID}" if TENANT_ID else ""
 SCOPES: list[str] = ["User.Read"]
 REDIRECT_URI: str = os.getenv("REDIRECT_URI", "http://localhost:4000/redirect")
 FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -17,7 +17,7 @@ ALLOWED_GROUPS_IDS: list[str] = [g for g in os.getenv("ALLOWED_GROUPS_IDS", "").
 # App
 PORT: int = int(os.getenv("PORT", "4000"))
 ENV: str = os.getenv("ENV", "development")
-LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "OLLAMA")
+LLM_PROVIDER: str | None = os.getenv("LLM_PROVIDER").upper() if os.getenv("LLM_PROVIDER") else None
 
 # CORS origins
 _CORS_DEV_ORIGINS: list[str] = [
@@ -52,20 +52,22 @@ MYSQL_USER: str = os.getenv("MYSQL_USER", "root")
 MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "")
 
 # IONOS LLM provider
-IONOS_API_KEY: str = os.getenv("IONOS_API_KEY", "")
+IONOS_API_KEY: str | None = os.getenv("IONOS_API_KEY")
 IONOS_BASE_URL: str = os.getenv("IONOS_BASE_URL", "https://openai.inference.de-txl.ionos.com/v1")
 IONOS_DEFAULT_MODEL: str = "meta-llama/Llama-3.3-70B-Instruct"
 IONOS_DEFAULT_EMBED_MODEL: str = "BAAI/bge-m3"
 
 # Ollama LLM provider
-OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "localhost")
-OLLAMA_PORT: str = os.getenv("OLLAMA_PORT", "11434")
+OLLAMA_BASE_URL: str | None = os.getenv("OLLAMA_BASE_URL")
 OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.1")
 OLLAMA_EMBED_MODEL: str = os.getenv("OLLAMA_EMBED_MODEL", "mxbai-embed-large")
 
 # Google GenAI LLM provider
-GOOGLE_MODEL: str = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")
+GOOGLE_API_KEY: str | None = os.getenv("GOOGLE_API_KEY")
+GOOGLE_MODEL: str = os.getenv("GOOGLE_MODEL", "gemini-3.1-flash-lite-preview")
+GOOGLE_EMBED_MODEL: str = os.getenv("GOOGLE_EMBED_MODEL", "gemini-embedding-001")
 
 # LLM settings
-CHUNK_SIZE: int = 512
-CHUNK_OVERLAP: int = 50
+CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "512"))
+CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "50"))
+EMBED_BATCH_SIZE: int = int(os.getenv("EMBED_BATCH_SIZE", "16"))

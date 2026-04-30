@@ -27,7 +27,7 @@ def resolve_llm_for_chat(db_chat: Chat) -> LLM:
     provider = (db_chat.model_provider or "GOOGLE_GENAI").upper()
     llm = None
     if provider in ("OLLAMA", "IONOS", "GOOGLE_GENAI"):
-        llm = create_llm(provider, model=model, temperature=db_chat.temperature)
+        llm = create_llm(provider=provider, model=model, temperature=db_chat.temperature)
     if llm is None:
         llm = Settings.llm
     if llm is None:
