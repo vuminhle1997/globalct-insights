@@ -1,10 +1,14 @@
 import asyncio
 import json
+import os
+import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import Depends, HTTPException
+from chromadb import Collection
+from fastapi import BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from llama_index.core.agent.workflow import ReActAgent
 from llama_index.core.llms import MessageRole
@@ -15,17 +19,25 @@ from starlette.requests import Request
 from backend.core.serializers import serialize_chat, serialize_chat_file
 from backend.dependencies import (
     SessionDep,
+    get_chroma_collection,
     get_chroma_vector,
     get_redis_client,
     logger,
 )
 from backend.models.chat import Chat, ChatQuery
+from backend.models.chat_file import ChatFile
 from backend.models.chat_message import ChatMessage
 from backend.routers.custom_router import APIRouter
 from backend.services.chat_service import build_chat_history, build_tools_from_params, resolve_llm_for_chat
+from backend.services.indexer import index_spreadsheet, index_uploaded_file
 from backend.services.llm_agent import create_agent
 from backend.services.memory import create_memory
+from backend.services.tasks import process_dump_to_persist
 from backend.utils.check_property import check_property_belongs_to_user
+from backend.utils.upload_sql_dump import detect_sql_dump_type
+
+BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(
     prefix="/chats",
@@ -351,3 +363,143 @@ async def chat_with_given_chat_id(
         **serialize_chat(db_chat),
         "message": {"response": response_text, "role": "assistant"},
     }
+
+
+@router.post("/{chat_id}/upload")
+async def upload_file_to_chat(
+    chat_id: str,
+    file: UploadFile = File(...),
+    db_client: SessionDep = SessionDep,
+    request: Request = Request,
+    chroma_collection: Collection = Depends(get_chroma_collection),
+    redis_session: Redis = Depends(get_redis_client),
+    background_tasks: BackgroundTasks = BackgroundTasks,
+):
+    """
+    Upload a file to a specific chat.
+
+    This endpoint allows the user to upload a file to a chat. If the file is an SQL dump,
+    it will be processed and indexed in the background.
+
+    - **chat_id**: The unique identifier of the chat.
+    - **file**: The file to be uploaded.
+    - **db_client**: Database session dependency.
+    - **request**: HTTP request object to extract cookies.
+    - **chroma_collection**: Dependency for vector store operations.
+    - **redis_session**: Redis client dependency for session validation.
+    - **background_tasks**: Background task manager for processing SQL dumps.
+
+    **Returns**:
+    - The updated chat details, including the uploaded file.
+
+    **Raises**:
+    - 404: If the chat is not found, does not belong to the user, or the file already exists.
+    - 500: If an error occurs during file processing or indexing.
+    """
+    db_chat = db_client.get(Chat, chat_id)
+    # Check if chat exists, if exists, continue
+    if not db_chat:
+        logger.error("Chat not found")
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    belongs_to_user, user_id = check_property_belongs_to_user(request, redis_session, db_chat)
+    if not belongs_to_user:
+        logger.error(f"Chat {chat_id} does not belong to user")
+        raise HTTPException(status_code=404, detail="Chat does not belong to user")
+    # If file is not attached to Upload, raise Error
+    if not file.filename:
+        logger.error("Does not have a File")
+        raise HTTPException(status_code=404, detail="File not found")
+    # If file is already uploaded, raise Error
+    for chat_file in db_chat.files:
+        if chat_file.file_name == file.filename:
+            logger.error(f"File already uploaded {file.filename}")
+            raise HTTPException(status_code=404, detail="File already exists")
+    # Upload file to Folder and persist it
+    chat_folder = BASE_UPLOAD_DIR / f"{chat_id}"
+    chat_folder.mkdir(parents=True, exist_ok=True)
+    file_path = chat_folder / f"{file.filename}"
+    with open(file_path, "wb+") as buffer:
+        buffer.write(file.file.read())
+    db_file = ChatFile(
+        id=str(uuid.uuid4()),
+        chat_id=db_chat.id,
+        path_name=str(file_path),
+        mime_type=file.content_type,
+        file_name=file.filename,
+        indexed=None
+        if any(
+            ext in file.content_type.lower() or ext in file.filename.lower()
+            for ext in ["sql", "xlsx", "spreadsheet", "csv"]
+        )
+        else False,
+    )
+
+    if file.content_type.lower().find("sql") != -1 and db_chat is not None:
+        logger.info(f"Processing SQL File for Chat: {db_chat.id}")
+        database_name = f"sd_{db_chat.id.replace('-', '_')[:5]}_{time.time_ns()}"
+        db_file.database_name = database_name
+        database_type = detect_sql_dump_type(str(file_path))
+        db_file.database_type = database_type
+        background_tasks.add_task(
+            process_dump_to_persist,
+            db_client=db_client,
+            chat_id=chat_id,
+            sql_dump_path=str(file_path),
+            database_type=database_type,
+            chat_file_id=db_file.id,
+            db_name=database_name,
+            chroma_collection=chroma_collection,
+        )
+
+    try:
+        # indexes file
+        db_chat.last_interacted_at = datetime.now()
+        db_chat.files.append(db_file)
+        db_client.commit()
+
+        if not any(
+            ext in file.content_type.lower() or ext in file.filename.lower()
+            for ext in ["sql", "xlsx", "spreadsheet", "csv"]
+        ):
+            background_tasks.add_task(
+                index_uploaded_file,
+                path=str(file_path),
+                chat_file=db_file,
+                chroma_collection=chroma_collection,
+                db_client=db_client,
+            )
+        if any(
+            ext in file.content_type.lower() or ext in file.filename.lower() for ext in ["xlsx", "spreadsheet", "csv"]
+        ):
+            md_id = str(uuid.uuid4())
+            md_file_path = f"{os.getcwd()}/uploads/{db_chat.id}/{file.filename.split('.')[0]}.md"
+            md_file = ChatFile(
+                id=md_id,
+                file_name=f"{db_file.file_name.split('.')[0]}.md",
+                path_name=md_file_path,
+                indexed=False,
+                chat_id=chat_id,
+                mime_type="text/markdown",
+            )
+            try:
+                db_chat.files.append(md_file)
+                db_client.commit()
+                logger.info(f"Created temporary markdown file, that is not indexed yet: {md_file.file_name}")
+            except Exception as e:
+                logger.error(e)
+                db_client.rollback()
+            background_tasks.add_task(
+                index_spreadsheet,
+                chroma_collection=chroma_collection,
+                file=db_file,
+                db_client=db_client,
+            )
+        db_client.refresh(db_chat)
+        return {
+            **serialize_chat(db_chat, include_files=True),
+        }
+    except Exception as e:
+        db_client.rollback()
+        logger.error(e)
+        raise HTTPException(status_code=500, detail=str(e))
