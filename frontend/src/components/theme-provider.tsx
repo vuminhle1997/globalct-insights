@@ -49,7 +49,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     if (savedTheme) {
       dispatch(setAppTheme(savedTheme as 'light' | 'dark' | 'system'));
     }
-  }, [dispatch]);
+  }, [dispatch, theme]);
 
   if (!mounted) {
     return <>{children}</>;

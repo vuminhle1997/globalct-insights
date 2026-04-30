@@ -26,7 +26,7 @@ import ChatAlertError from './alerts/ChatAlertError';
 import FavouritesChatNavigation from './subnavigation/FavouritesChatNavigation';
 import TemplatesChatNavigation from './subnavigation/TemplatesChatNavigation';
 import UsersChatNavigation from './subnavigation/UsersChatNavigation';
-import ChatSettingsForm, { ChatSettingsFormProps } from './ChatSettingsForm';
+import ChatForm, { ChatSettingsFormProps } from './ChatForm';
 import {
   Accordion,
   AccordionContent,
@@ -49,12 +49,12 @@ export const chatFormSchema = z.object({
   model_provider: z.string(),
 });
 
-export type ChatEntryFormData = z.infer<typeof chatFormSchema>;
+export type ChatDialogFornData = z.infer<typeof chatFormSchema>;
 
 /** Internal alias kept for readability within this file */
-type FormData = ChatEntryFormData;
+type FormData = ChatDialogFornData;
 
-interface ChatEntryFormProps {
+interface ChatFormDialogProps {
   chat?: Chat;
   onSuccess?: () => void;
   mode?: 'create' | 'update';
@@ -62,55 +62,13 @@ interface ChatEntryFormProps {
   onUpdated?: (chat: Chat) => void;
 }
 
-/**
- * A React component for creating or updating chat entries. This component provides
- * a form interface for managing chat details, including title, description, context,
- * avatar, temperature, and model. It also allows users to use predefined templates
- * or existing chats as a base for creating new chats.
- *
- * @component
- * @param {ChatEntryFormProps} props - The properties for the ChatEntryForm component.
- * @param {Chat | undefined} props.chat - The chat object to edit. If undefined, the form
- * initializes in "create" mode.
- * @param {() => void} [props.onSuccess] - A callback function to execute after a successful
- * form submission.
- * @param {'create' | 'update'} [props.mode] - The mode of the form, either "create" or "update".
- * Defaults to "create" if no chat is provided.
- *
- * @returns {JSX.Element} The rendered ChatEntryForm component.
- *
- * @remarks
- * - The form uses `react-hook-form` for managing form state and validation.
- * - Supports avatar uploads and previews.
- * - Allows users to select predefined templates or existing chats as a base for new chats.
- * - Displays success and error alerts based on the outcome of form submission.
- *
- * @example
- * ```tsx
- * <ChatEntryForm
- *   chat={existingChat}
- *   onSuccess={() => console.log('Chat saved successfully!')}
- * />
- * ```
- *
- * @dependencies
- * - `useForm` from `react-hook-form` for form handling.
- * - `usePostChat` and `useUpdateChat` for API interactions.
- * - `useAppSelector` for accessing Redux state.
- * - `useRouter` from `next/router` for navigation.
- * - `axios` for fetching avatar data.
- *
- * @internal
- * This component is designed to be used within the chat management system and
- * assumes the presence of specific Redux selectors and API hooks.
- */
-export default function ChatEntryForm({
+export default function ChatFormDialog({
   chat,
   onSuccess,
   mode = chat ? 'update' : 'create',
   onCreated,
   onUpdated,
-}: ChatEntryFormProps) {
+}: ChatFormDialogProps) {
   const {
     register,
     handleSubmit,
@@ -379,7 +337,7 @@ export default function ChatEntryForm({
             </div>
           </div>
           {/* Form */}
-          <ChatSettingsForm {...chatSettingsFormProps} />
+          <ChatForm {...chatSettingsFormProps} />
         </div>
       </DialogContent>
       {showError && <ChatAlertError mode={mode} />}

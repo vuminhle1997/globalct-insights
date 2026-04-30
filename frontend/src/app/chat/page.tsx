@@ -1,7 +1,6 @@
 'use client';
 
 import WelcomeScreen from '@/components/pages/index/WelcomeScreen';
-import React from 'react';
 import AuthProvider from '@/components/AuthProvider';
 import ChatLoadingScreen from '@/components/pages/chat/ChatLoadingScreen';
 

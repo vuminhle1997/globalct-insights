@@ -52,7 +52,7 @@ import ChatNavigationItem from './chat/ChatNavigationItem';
  * - `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem` for dropdown functionality.
  * - `TooltipProvider`, `Tooltip`, `TooltipTrigger`, `TooltipContent` for tooltips.
  * - `DeleteChatDialog` for confirming chat deletion.
- * - `ChatEntryForm` for editing chat details.
+ * - `ChatDialogForn` for editing chat details.
  *
  * @state
  * - `isDialogOpen` (`boolean`): Tracks whether the edit dialog is open.

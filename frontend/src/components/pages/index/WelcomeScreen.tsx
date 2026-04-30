@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Bars3Icon, PencilSquareIcon } from '@heroicons/react/24/solid';
-import ChatEntryForm from '@/components/form/ChatEntryForm';
+import ChatDialogForn from '@/components/form/ChatFormDialog';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion';
 import Logo from '@/static/globalLogo.png';
 import Image from 'next/image';
+import { WaveBackground } from '@/components/ui/wave-animation';
 
 export default function WelcomeScreen() {
   const isMobile = useIsMobile();
@@ -97,12 +98,20 @@ export default function WelcomeScreen() {
                     </p>
                   </TooltipContent>
                 </Tooltip>
-                <ChatEntryForm onCreated={() => setIsCreateOpen(false)} />
+                <ChatDialogForn onCreated={() => setIsCreateOpen(false)} />
               </Dialog>
             </TooltipProvider>
           </div>
         </motion.div>
       </div>
+      <motion.div
+        className="absolute inset-0 -z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+      >
+        <WaveBackground />
+      </motion.div>
     </main>
   );
 }

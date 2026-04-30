@@ -1,5 +1,4 @@
-import React from 'react';
-import BackHomeButtonIfLoggedOut from '@/components/BackHomeButtonIfLoggedOut';
+import BackHomeButtonIfLoggedOut from '@/components/misc/BackHomeButtonIfLoggedOut';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

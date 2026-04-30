@@ -67,7 +67,9 @@ export default function FooterNavigation() {
    * @param value - The new theme to be applied. Can be either 'dark' or 'light'.
    */
   const handleThemeChange = (value: 'dark' | 'light') => {
+    localStorage.setItem('theme', value);
     dispatch(setAppTheme(value));
+    window.location.reload();
   };
 
   return (
