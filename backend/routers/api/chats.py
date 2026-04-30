@@ -22,9 +22,8 @@ from backend.models.chat_file import ChatFile
 from backend.models.chat_message import ChatMessage
 from backend.routers.custom_router import APIRouter
 from backend.services.indexer import deletes_file_index_from_collection
-from backend.utils.check_property import check_property_belongs_to_user
-from backend.utils import verify_session_and_get_user_id
-from backend.utils.upload_sql_dump import delete_database_from_postgres
+from backend.services.session_service import check_property_belongs_to_user, verify_session_and_get_user_id
+from backend.services.sql_dump_service import delete_database_from_postgres
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 BASE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

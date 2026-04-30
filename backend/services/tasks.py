@@ -5,14 +5,8 @@ from backend.dependencies import SessionDep, engine, logger
 from backend.models.chat import Chat
 from backend.models.chat_file import ChatFile
 from backend.services.indexer import index_sql_dump
-from backend.utils.upload_sql_dump import (
-    list_all_tables_from_db,
-    load_dump_to_database,
-    pg_host,
-    pg_password,
-    pg_port,
-    pg_user,
-)
+from backend.core.config import PG_HOST as pg_host, PG_PASSWORD as pg_password, PG_PORT as pg_port, PG_USER as pg_user
+from backend.services.sql_dump_service import list_all_tables_from_db, load_dump_to_database
 
 
 def process_dump_to_persist(

@@ -14,8 +14,7 @@ from backend.dependencies import get_db_session, get_redis_client, logger
 from backend.models.chat import Chat
 from backend.models.favourite import Favourite, FavouritePublic
 from backend.routers.custom_router import APIRouter
-from backend.utils import verify_session_and_get_user_id
-from backend.utils.check_property import check_property_belongs_to_user
+from backend.services.session_service import check_property_belongs_to_user, verify_session_and_get_user_id
 
 router = APIRouter(
     prefix="/favourites",

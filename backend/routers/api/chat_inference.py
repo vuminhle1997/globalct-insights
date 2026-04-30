@@ -34,8 +34,8 @@ from backend.services.indexer import index_spreadsheet, index_uploaded_file
 from backend.services.llm_agent import create_agent
 from backend.services.memory import create_memory
 from backend.services.tasks import process_dump_to_persist
-from backend.utils.check_property import check_property_belongs_to_user
-from backend.utils.upload_sql_dump import detect_sql_dump_type
+from backend.services.session_service import check_property_belongs_to_user
+from backend.services.sql_dump_service import detect_sql_dump_type
 
 BASE_UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
 

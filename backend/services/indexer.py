@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 
 from backend.dependencies import SessionDep, logger
 from backend.models.chat_file import ChatFile
-from backend.utils.upload_sql_dump import initialize_pg_url
+from backend.services.sql_dump_service import initialize_pg_url
 
 
 def index_spreadsheet(chroma_collection: Collection, file: ChatFile, db_client: SessionDep):

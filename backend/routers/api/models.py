@@ -8,7 +8,7 @@ from starlette.requests import Request
 
 from backend.dependencies import get_redis_client
 from backend.routers.custom_router import APIRouter
-from backend.utils import verify_session_exists
+from backend.services.session_service import verify_session_exists
 
 router = APIRouter(
     prefix="/models",

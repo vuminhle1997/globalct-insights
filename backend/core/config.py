@@ -47,6 +47,12 @@ CHROMA_HOST: str = os.getenv("CHROMA_HOST", "localhost")
 CHROMA_PORT: int = int(os.getenv("CHROMA_PORT", "8000"))
 CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION_NAME", "llama-rag")
 
+# MySQL (used only for SQL dump migration flows)
+MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_PORT: int = int(os.getenv("MYSQL_PORT", "3306"))
+MYSQL_USER: str = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD", "")
+
 # LLM settings
 CHUNK_SIZE: int = 512
 CHUNK_OVERLAP: int = 20

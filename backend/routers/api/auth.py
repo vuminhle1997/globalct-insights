@@ -18,7 +18,7 @@ from backend.core.config import (
     SCOPES,
 )
 from backend.dependencies import get_redis_client, logger
-from backend.utils.jwt import decode_jwt
+from backend.services.session_service import decode_jwt
 
 router = APIRouter(tags=["auth"])
 
