@@ -67,8 +67,13 @@ def get_chroma_vector():
     Provide a ChromaVectorStore instance for vector storage operations.
     This function is a generator that yields the vector store.
     """
-    chroma_collection = chroma_client.get_or_create_collection(CHROMA_COLLECTION)
-    chroma_vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+
+    chroma_vector_store = ChromaVectorStore(
+        host=CHROMA_HOST,
+        port=CHROMA_PORT,
+        collection_name=CHROMA_COLLECTION,
+        ssl=False,
+    )
     yield chroma_vector_store
 
 

@@ -26,9 +26,7 @@ _CORS_DEV_ORIGINS: list[str] = [
     "http://localhost:4000",
     "http://localhost:5173",
 ]
-CORS_ORIGINS: list[str] = (
-    [FRONTEND_URL] if ENV == "production" else list({*_CORS_DEV_ORIGINS, FRONTEND_URL})
-)
+CORS_ORIGINS: list[str] = [FRONTEND_URL] if ENV == "production" else list({*_CORS_DEV_ORIGINS, FRONTEND_URL})
 
 # Database
 PG_HOST: str = os.getenv("PG_HOST", "localhost")

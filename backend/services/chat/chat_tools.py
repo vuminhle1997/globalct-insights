@@ -1,54 +1,35 @@
 import uuid
 
 import pandas as pd
-from llama_index.core import SQLDatabase, StorageContext, VectorStoreIndex
+from llama_index.core import SQLDatabase, StorageContext
 from llama_index.core.indices.struct_store import SQLTableRetrieverQueryEngine
+from llama_index.core.llms import LLM
 from llama_index.core.objects import ObjectIndex, SQLTableNodeMapping, SQLTableSchema
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core.query_engine import BaseQueryEngine
 from llama_index.core.settings import Settings
 from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
-from llama_index.core.vector_stores import (
-    FilterOperator,
-    MetadataFilter,
-    MetadataFilters,
-)
-from llama_index.llms.ollama import Ollama
+from llama_index.core.vector_stores import ExactMatchFilter, FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.readers.web import BeautifulSoupWebReader
 from llama_index.tools.duckduckgo import DuckDuckGoSearchToolSpec
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from sqlalchemy import create_engine
 
+from backend.dependencies import logger
 from backend.models.chat import Chat, FileParams
 from backend.models.chat_file import ChatFile
 from backend.services.migration.db_migration_manager import initialize_pg_url
+from backend.services.rag.indexer.vector_store import StrictVectorStoreIndex
 from backend.services.rag.pandas.pandas_query_engine import PandasQueryEngine
 
 
 def create_filters_for_files(files: list[ChatFile]):
-    """
-    Creates metadata filters for a list of files, excluding SQL files.
-
-    Args:
-        files (List[ChatFile]): List of ChatFile objects to create filters for.
-
-    Returns:
-        List[MetadataFilters]: List of metadata filter objects, one for each non-SQL file.
-        Returns empty list if input files list is empty.
-
-    Example:
-        >>> files = [ChatFile(id="1", mime_type="text/plain")]
-        >>> filters = create_filters_for_files(files)
-        >>> print(filters)
-        [MetadataFilters(filters=[MetadataFilter(operator=EQ, key="file_id", value="1")])]
-    """
     if len(files) == 0:
         return []
     filters = [
         MetadataFilters(
             filters=[
-                MetadataFilter(
-                    operator=FilterOperator.EQ,
+                ExactMatchFilter(
                     key="file_id",
                     value=file.id,
                 )
@@ -57,36 +38,23 @@ def create_filters_for_files(files: list[ChatFile]):
         for file in files
         if all(ext not in file.mime_type.lower() for ext in ["sql", "xlsx", "csv"])
     ]
+    logger.info(f"Created metadata filters for {len(filters)} files.")
+    logger.info(f"Filters: {filters}")
     return filters
 
 
 def create_query_engines_from_filters(
-    filters: list[MetadataFilters], chroma_vector_store: ChromaVectorStore, llm: Ollama
+    filters: list[MetadataFilters], chroma_vector_store: ChromaVectorStore, llm: LLM
 ) -> list[BaseQueryEngine]:
-    """
-    Creates a list of query engines from metadata filters using a Chroma vector store.
-
-    Args:
-        filters (List[MetadataFilter]): A list of metadata filters to create query engines from.
-        chroma_vector_store (ChromaVectorStore): The Chroma vector store to use for creating the index.
-        llm (Ollama): The Ollama to use for creating the index.
-
-    Returns:
-        List[BaseQueryEngine]: A list of query engines, each initialized with a corresponding metadata filter.
-
-    Example:
-        >>> filters = [MetadataFilter(key="category", value="tech"), MetadataFilter(key="date", value="2023")]
-        >>> query_engines = create_query_engines_from_filters(filters, chroma_store)
-    """
     storage_context = StorageContext.from_defaults(vector_store=chroma_vector_store)
-    vector_index = VectorStoreIndex.from_vector_store(
+    vector_index = StrictVectorStoreIndex.from_vector_store(
         vector_store=chroma_vector_store,
         storage_context=storage_context,
         embed_model=Settings.embed_model,
     )
     query_engines = [
         vector_index.as_query_engine(
-            filter=meta_filters,
+            filters=meta_filters,
             llm=llm if llm is not None else Settings.llm,
             node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.7)],
         )
@@ -98,40 +66,9 @@ def create_query_engines_from_filters(
 def create_query_engine_tools(
     files: list[ChatFile],
     chroma_vector_store: ChromaVectorStore,
-    llm: Ollama,
+    llm: LLM,
     params: dict[str, FileParams] = None,
 ) -> list[QueryEngineTool]:
-    """
-    Creates a list of query engine tools (basic RAG or text-extraction) for analyzing and retrieving information
-    from a collection of files, excluding certain file types based on their MIME types.
-
-    Args:
-        files (List[ChatFile]): A list of `ChatFile` objects representing the files
-            to be processed.
-        chroma_vector_store (ChromaVectorStore): An instance of `ChromaVectorStore`
-            used for creating query engines.
-        llm (Ollama): An instance of `Ollama` used for creating query engines.
-        params (Dict[str, any], optional): A dictionary containing parameters for
-            configuring the query engines. Expected keys include:
-                - 'query_type' (str): The type of query engine to create.
-                  Possible values are 'basic' for a standard RAG tool or
-                  'text-extraction' for a tool focused on extracting fields
-                  from documents. Defaults to None.
-
-    Returns:
-        List[QueryEngineTool]: A list of `QueryEngineTool` objects, each associated
-        with a query engine and metadata describing its purpose.
-
-    The function performs the following steps:
-        1. Filters out files with MIME types containing specific keywords
-           (e.g., "sql", "xlsx", "csv").
-        2. Creates filters for the remaining files.
-        3. Generates query engines based on the filters and the provided
-           `chroma_vector_store`.
-        4. Constructs `QueryEngineTool` objects for each query engine, with
-           metadata describing the tool's purpose. Special descriptions are
-           provided for markdown files.
-    """
     excluded_mime_keywords = ["sql", "xlsx", "csv"]
     # Filter out unwanted files
     filtered_files = [
@@ -297,7 +234,7 @@ def create_sql_engines_tools_from_files(
         - The resulting tools are configured with a description and a retriever for querying the database.
     """
     storage_context = StorageContext.from_defaults(vector_store=chroma_vector_store)
-    index = VectorStoreIndex.from_vector_store(
+    index = StrictVectorStoreIndex.from_vector_store(
         vector_store=chroma_vector_store,
         storage_context=storage_context,
         embed_model=Settings.embed_model,
@@ -420,7 +357,7 @@ def create_url_loader_tool(chroma_vector_store: ChromaVectorStore, chat: Chat):
                 "file_id": db_file.id,
             }
 
-        VectorStoreIndex.from_documents(
+        StrictVectorStoreIndex.from_documents(
             documents=[documents[0]],
             storage_context=storage_context,
             show_progress=True,
@@ -498,7 +435,7 @@ def create_search_engine_tool(chroma_vector_store: ChromaVectorStore, chat: Chat
                 "file_id": db_file.id,
             }
             chat.files.append(db_file)
-            VectorStoreIndex.from_documents(
+            StrictVectorStoreIndex.from_documents(
                 documents=[document],
                 vector_store=chroma_vector_store,
                 storage_context=storage_context,
