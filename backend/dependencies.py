@@ -102,7 +102,11 @@ async def verify_session(session_id: str = Cookie(None)):
         logger.warning("Unauthorized access attempt without session token")
         raise HTTPException(status_code=401, detail="Unauthorized - No session token provided")
 
-    expires_at = await get_redis_client().get(f"session:{session_id}")
+    redis = Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+    try:
+        expires_at = redis.get(f"session:{session_id}")
+    finally:
+        redis.close()
     if not expires_at:
         logger.warning(f"Unauthorized access attempt with session token: {session_id}")
         raise HTTPException(status_code=401, detail="Unauthorized - Session expired or invalid")

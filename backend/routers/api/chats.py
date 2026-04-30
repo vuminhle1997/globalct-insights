@@ -12,14 +12,11 @@ from fastapi import BackgroundTasks, Depends, File, Form, HTTPException, Respons
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate as sqlalchemy_pagination
-from llama_index.core import PromptTemplate
 from llama_index.core.agent.workflow import ReActAgent
-from llama_index.core.chat_engine.types import AgentChatResponse
 from llama_index.core.llms import ChatMessage as LLMChatMessage, MessageRole
-from llama_index.core.memory import ChatMemoryBuffer
+from llama_index.core.memory import Memory
 from llama_index.core.settings import Settings
 from llama_index.core.tools import BaseTool
-from llama_index.llms.ollama import Ollama
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from redis import Redis
 from starlette.requests import Request
@@ -38,6 +35,7 @@ from backend.models.chat_message import ChatMessage
 from backend.routers.custom_router import APIRouter
 from backend.services.indexer import deletes_file_index_from_collection, index_spreadsheet, index_uploaded_file
 from backend.services.llm_agent import create_agent
+from backend.services.llm_factory import create_llm
 from backend.services.memory import create_memory
 from backend.services.tasks import process_dump_to_persist
 from backend.services.tools_initializer import (
@@ -120,70 +118,6 @@ def serialize_chat(chat: Chat, *, include_files: bool = False) -> dict:
     return serialized_chat
 
 
-def initialize_ionos_llm(temperature: float):
-    """
-    Initializes and returns an instance of an OpenAI-compatible LLM (OpenAILike) configured for IONOS deployment.
-
-    This function loads environment variables (e.g., `IONOS_BASE_URL`, `IONOS_API_KEY`) from a `.env` file
-    and uses them to configure the connection to a local or remote IONOS-compatible LLM API.
-
-    Parameters:
-    -----------
-    temperature : float
-        The temperature parameter for the LLM, controlling the randomness of the output.
-        Higher values (e.g., 1.0) yield more diverse output, while lower values (e.g., 0.2) make it more deterministic.
-
-    Returns:
-    --------
-    OpenAILike
-        An instance of the `OpenAILike` LLM from LlamaIndex, configured to use the IONOS endpoint with provided settings.
-
-    Environment Variables:
-    ----------------------
-    - IONOS_BASE_URL : str
-        The base URL of the IONOS-compatible LLM API (e.g., http://localhost:11434).
-    - IONOS_API_KEY : str
-        The API key used for authenticating with the IONOS LLM endpoint.
-
-    Notes:
-    ------
-    - Defaults are used if environment variables are not set.
-    - The `OPENAI_API_BASE` and `OPENAI_API_KEY` are set globally in the environment to ensure
-      compatibility with tools expecting OpenAI-like APIs.
-    """
-    import os
-
-    from dotenv import load_dotenv
-    from llama_index.llms.openai_like import OpenAILike
-
-    load_dotenv()  # Load environment variables from .env file
-
-    # Read base URL and API key from environment variables or fallback to defaults
-    base_url = os.getenv("IONOS_BASE_URL", "http://localhost:11434")
-    api_key = os.getenv("IONOS_API_KEY", "your_api_key_here")
-
-    # Set required environment variables for OpenAI-compatible API access
-    os.environ["OPENAI_API_BASE"] = base_url
-    os.environ["OPENAI_API_KEY"] = api_key
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-
-    # Instantiate the OpenAILike LLM with specified parameters
-    llm = OpenAILike(
-        api_base=base_url,
-        temperature=temperature,
-        model="meta-llama/Llama-3.3-70B-Instruct",
-        is_chat_model=True,
-        default_headers=headers,
-        api_key=api_key,
-        context_window=128000,
-    )
-
-    return llm
-
 
 async def stream_agent_response(
     agent: ReActAgent,
@@ -191,7 +125,7 @@ async def stream_agent_response(
     db_client: SessionDep,
     chat_id: str,
     user_message: ChatMessage,
-    chat_memory: ChatMemoryBuffer,
+    chat_memory: Memory,
 ) -> AsyncGenerator[str, None]:
     """
     Asynchronously streams the response from a ReActAgent as Server-Sent Events (SSE) while saving the conversation to the database.
@@ -202,7 +136,7 @@ async def stream_agent_response(
         db_client (SessionDep): Database session dependency for ORM operations.
         chat_id (str): The unique identifier for the chat session.
         user_message (ChatMessage): The user's message object to be saved.
-        chat_memory (ChatMemoryBuffer): The memory buffer containing chat history.
+        chat_memory (Memory): The memory instance containing chat history.
 
     Yields:
         str: Server-Sent Event (SSE) formatted strings containing response chunks, status, or error messages.
@@ -381,7 +315,7 @@ async def get_chat(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
+    belongs_to_user, _ = check_property_belongs_to_user(request, redis_client, db_chat)
     messages = (
         db_client.query(ChatMessage)
         .filter(ChatMessage.chat_id == chat_id)
@@ -445,7 +379,7 @@ async def chat_stream(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
+    belongs_to_user, _ = check_property_belongs_to_user(request, redis_client, db_chat)
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")
@@ -488,18 +422,11 @@ async def chat_stream(
     llm = None
 
     if provider == "OLLAMA":
-        llm = Ollama(
-            model=model_from_chat,
-            temperature=db_chat.temperature,
-            request_timeout=500,
-            base_url=base_url,
-        )
+        llm = create_llm("OLLAMA", model=model_from_chat, temperature=db_chat.temperature)
     elif provider == "IONOS":
-        llm = initialize_ionos_llm(temperature=db_chat.temperature)
+        llm = create_llm("IONOS", temperature=db_chat.temperature)
     elif provider == "GOOGLE_GENAI":
-        from llama_index.llms.google_genai import GoogleGenAI
-
-        llm = GoogleGenAI(model=model_from_chat, temperature=db_chat.temperature)
+        llm = create_llm("GOOGLE_GENAI", model=model_from_chat, temperature=db_chat.temperature)
 
     # Fall back to globally configured LLM (e.g. GOOGLE provider from app startup).
     if llm is None:
@@ -596,7 +523,7 @@ async def chat_with_given_chat_id(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
+    belongs_to_user, _ = check_property_belongs_to_user(request, redis_client, db_chat)
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")
@@ -627,43 +554,73 @@ async def chat_with_given_chat_id(
         for message in old_messages
     ]
 
-    # Now the fun is getting started
-    chat_memory = ChatMemoryBuffer.from_defaults(
-        chat_history=chat_history,
-        token_limit=128_000,
-    )
-
-    files = db_chat.files
-    tools = create_query_engine_tools(files=files, chroma_vector_store=chroma_vector_store)
-    pd_tools = create_pandas_engines_tools_from_files(files=files)
-    sql_tools = create_sql_engines_tools_from_files(files=files, chroma_vector_store=chroma_vector_store)
-
-    scrape_tool = create_url_loader_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
-    search_engine_tool = create_search_engine_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
-
-    tools = tools + pd_tools
-    tools = tools + sql_tools
-    tools = tools + [scrape_tool]
-    tools = tools + [search_engine_tool]
-
+    # Determine LLM from chat's model_provider — mirrors the streaming endpoint
     if db_chat.model:
         model_from_chat = db_chat.model
     else:
-        model_from_chat = "llama3.3:70b"
+        model_from_chat = None
 
-    llm = Ollama(
-        model=model_from_chat,
-        temperature=db_chat.temperature,
-        request_timeout=500,
-        base_url=base_url,
-    )
-    agent = create_agent(
-        memory=chat_memory,
-        system_prompt=PromptTemplate(db_chat.context),
-        tools=tools,
+    provider = (db_chat.model_provider or "GOOGLE_GENAI").upper()
+    llm = None
+
+    if provider == "OLLAMA":
+        llm = create_llm("OLLAMA", model=model_from_chat, temperature=db_chat.temperature)
+    elif provider == "IONOS":
+        llm = create_llm("IONOS", temperature=db_chat.temperature)
+    elif provider == "GOOGLE_GENAI":
+        llm = create_llm("GOOGLE_GENAI", model=model_from_chat, temperature=db_chat.temperature)
+
+    # Fall back to globally configured LLM (e.g. GOOGLE provider from app startup).
+    if llm is None:
+        llm = Settings.llm
+
+    if llm is None:
+        logger.error("No LLM configured for chat (provider=%s)", provider)
+        raise HTTPException(status_code=500, detail="No LLM configured. Check server model settings.")
+
+    # new implementation of agent memory
+    chat_memory = create_memory(
+        chat_id=chat_id,
         llm=llm,
+        messages=chat_history,
+        vector_store=chroma_vector_store,
+        token_limit=128_000,
+        system_prompt=db_chat.context,
     )
-    agent_response: AgentChatResponse = await agent.achat(chat.text)
+
+    files = db_chat.files
+    tools: list[BaseTool] = []
+
+    for file_id, file_params in chat.params.files.items():
+        files_to_query = [file for file in files if file.id == file_id and file_params.queried == True]
+        query_engine_tools = create_query_engine_tools(
+            files=files_to_query,
+            chroma_vector_store=chroma_vector_store,
+            llm=llm,
+            params=file_params,
+        )
+        if len(query_engine_tools) > 0:
+            tools += query_engine_tools
+        for file in files_to_query:
+            if file.id == file_id and file_params.query_type == "sql":
+                sql_tools = create_sql_engines_tools_from_files(
+                    files=files_to_query, chroma_vector_store=chroma_vector_store
+                )
+                tools += sql_tools
+            if file.id == file_id and file_params.query_type == "spreadsheet":
+                pd_tools = create_pandas_engines_tools_from_files(files=files_to_query)
+                tools += pd_tools
+
+    if chat.params.use_link_scraping:
+        scrape_tool = create_url_loader_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
+        tools.append(scrape_tool)
+    if chat.params.use_websearch:
+        search_engine_tool = create_search_engine_tool(chroma_vector_store=chroma_vector_store, chat=db_chat)
+        tools.append(search_engine_tool)
+
+    agent = create_agent(system_prompt=db_chat.context, tools=tools, llm=llm)
+    agent_response = await agent.run(user_msg=chat.text, memory=chat_memory)
+    response_text = agent_response if isinstance(agent_response, str) else str(agent_response)
 
     db_chat.last_interacted_at = datetime.now()
     chat_messages = [
@@ -671,7 +628,7 @@ async def chat_with_given_chat_id(
         ChatMessage(
             id=str(uuid.uuid4()),
             role=MessageRole.ASSISTANT,
-            text=agent_response.response,
+            text=response_text,
             block_type="text",
             additional_kwargs={},
             chat_id=chat_id,
@@ -686,7 +643,7 @@ async def chat_with_given_chat_id(
 
     return {
         **serialize_chat(db_chat),
-        "message": {"response": agent_response, "role": "assistant"},
+        "message": {"response": response_text, "role": "assistant"},
     }
 
 
@@ -929,7 +886,7 @@ async def update_chat(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
+    belongs_to_user, _ = check_property_belongs_to_user(request, redis_client, db_chat)
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")
@@ -1009,7 +966,7 @@ async def delete_chat(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
+    belongs_to_user, _ = check_property_belongs_to_user(request, redis_client, db_chat)
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")
@@ -1070,7 +1027,7 @@ async def delete_file_of_chat(
         logger.error(f"Chat {chat_id} not found")
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    belongs_to_user = check_property_belongs_to_user(request, redis_client, db_chat)
+    belongs_to_user, _ = check_property_belongs_to_user(request, redis_client, db_chat)
     if not belongs_to_user:
         logger.error(f"Chat {chat_id} does not belong to user")
         raise HTTPException(status_code=404, detail="Chat does not belong to user")

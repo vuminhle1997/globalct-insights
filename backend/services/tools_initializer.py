@@ -4,6 +4,7 @@ import pandas as pd
 from llama_index.core import SQLDatabase, StorageContext, VectorStoreIndex
 from llama_index.core.indices.struct_store import SQLTableRetrieverQueryEngine
 from llama_index.core.objects import ObjectIndex, SQLTableNodeMapping, SQLTableSchema
+from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core.query_engine import BaseQueryEngine
 from llama_index.core.settings import Settings
 from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
@@ -84,7 +85,11 @@ def create_query_engines_from_filters(
         embed_model=Settings.embed_model,
     )
     query_engines = [
-        vector_index.as_query_engine(filter=meta_filters, llm=llm if llm is not None else Settings.llm)
+        vector_index.as_query_engine(
+            filter=meta_filters,
+            llm=llm if llm is not None else Settings.llm,
+            node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=0.7)],
+        )
         for meta_filters in filters
     ]
     return query_engines

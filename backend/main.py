@@ -97,60 +97,12 @@ if not uploads_dir.exists():
 
 # Settings global
 provider = os.getenv("LLM_PROVIDER", "OLLAMA")
-api_key = None
-llm = None
-embed_model = None
 
 # Initialize LLM and embedding model based on provider
-if provider == "IONOS":
-    from llama_index.embeddings.openai import OpenAIEmbedding
-    from llama_index.llms.openai_like import OpenAILike
+from backend.services.llm_factory import create_embed_model, create_llm
 
-    base_url = os.getenv("IONOS_BASE_URL", "http://localhost:11434")
-    api_key = os.getenv("IONOS_API_KEY", "your_api_key_here")
-    os.environ["OPENAI_API_BASE"] = base_url
-    os.environ["OPENAI_API_KEY"] = api_key
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-
-    llm = OpenAILike(
-        api_base=base_url,
-        temperature=0,
-        model="meta-llama/Llama-3.3-70B-Instruct",
-        is_chat_model=True,
-        default_headers=headers,
-        api_key=api_key,
-        context_window=128000,
-        request_timeout=420,
-    )
-    embed_model = OpenAIEmbedding(
-        model_name="BAAI/bge-m3",
-        api_base=base_url,
-        api_key=api_key,
-        default_headers=headers,
-        embed_batch_size=10,
-    )
-elif provider == "OLLAMA":
-    from llama_index.embeddings.ollama import OllamaEmbedding
-    from llama_index.llms.ollama import Ollama
-
-    llm = Ollama(
-        model=os.getenv("OLLAMA_MODEL", "llama3.1"),
-        base_url=base_url,
-        request_timeout=420,
-    )
-    embed_model = OllamaEmbedding(
-        model_name=os.getenv("OLLAMA_EMBED_MODEL", "mxbai-embed-large"),
-        base_url=base_url,
-    )
-else:
-    from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
-    from llama_index.llms.google_genai import GoogleGenAI
-
-    llm = GoogleGenAI(model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"), temperature=0.75)
-    embed_model = GoogleGenAIEmbedding()
+llm = create_llm(provider)
+embed_model = create_embed_model(provider)
 
 # Set global settings for LLM and embedding model
 Settings.llm = llm
